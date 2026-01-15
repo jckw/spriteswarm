@@ -1,0 +1,109 @@
+---
+title: Introduction
+description: 'Declarative automation orchestration for AI agents'
+---
+
+# What is SpriteSwarm?
+
+SpriteSwarm is a lightweight orchestration service that connects events to AI-powered [Sprites](https://sprites.dev). Define your automations in simple YAML files, and SpriteSwarm handles the rest—receiving webhooks, evaluating rules, and dispatching commands to your Sprites.
+
+<CardGroup cols={2}>
+  <Card title="Event-Driven" icon="bolt">
+    Respond to webhooks from GitHub, Slack, Stripe, Sentry, and more
+  </Card>
+  <Card title="Scheduled Tasks" icon="clock">
+    Run recurring jobs with cron expressions for daily reports and checks
+  </Card>
+  <Card title="AI-Powered" icon="robot">
+    Dispatch tasks to Sprites running Claude for intelligent automation
+  </Card>
+  <Card title="Fire and Forget" icon="paper-plane">
+    Commands execute asynchronously—no blocking, no waiting
+  </Card>
+</CardGroup>
+
+## How It Works
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Webhooks  │────▶│ SpriteSwarm  │────▶│   Sprites   │
+│  (GitHub,   │     │ (Orchestrator)│     │  (Claude)   │
+│  Slack...)  │     └──────────────┘     └─────────────┘
+└─────────────┘            ▲
+                           │
+                    ┌──────┴──────┐
+                    │ Cron Jobs   │
+                    │ (Scheduled) │
+                    └─────────────┘
+```
+
+1. **Events arrive** from webhooks or cron schedules
+2. **SpriteSwarm matches** events against your automation rules
+3. **Commands are dispatched** to pre-configured Sprites
+4. **Sprites execute** using Claude to complete intelligent tasks
+
+## What are Sprites?
+
+Think of a Sprite as a persistent team member you've set up with specific tools and access. No Docker files, no ephemeral containers—each Sprite is a real environment that persists between runs.
+
+You set up a Sprite the same way you'd set up your own machine:
+- Install Claude Code
+- Connect MCP servers (PostHog, GitHub, Slack, etc.)
+- Add API keys and credentials
+- Clone any repos you need
+
+Once configured, that Sprite is ready to receive work. Because storage persists, Sprites can remember context, cache data, and maintain state across invocations.
+
+## Example: Slack-Triggered Code Review
+
+When someone messages your Slack bot asking for a code review, SpriteSwarm can dispatch a Sprite to analyze the code and post results back:
+
+```yaml
+id: slack-code-review
+description: Review code when requested in Slack
+
+sprite:
+  name: code-reviewer
+  workdir: /home/user/repos
+
+source:
+  type: webhook
+  event: message
+
+match:
+  - payload.event.type == "app_mention"
+
+run: |
+  Review the code mentioned in this Slack message and post your findings.
+  Channel: {{payload.event.channel}}
+  Message: {{payload.event.text}}
+  User: {{payload.event.user}}
+```
+
+## Why SpriteSwarm?
+
+<AccordionGroup>
+  <Accordion title="Declarative over imperative">
+    Define what should happen, not how. No custom code, webhooks, or infrastructure to maintain.
+  </Accordion>
+  <Accordion title="AI-native automation">
+    Built specifically for AI agents. Your Sprites can use Claude to understand context, make decisions, and take intelligent actions.
+  </Accordion>
+  <Accordion title="Separation of concerns">
+    SpriteSwarm orchestrates. Sprites execute. Each component does one thing well.
+  </Accordion>
+  <Accordion title="Secure by design">
+    The orchestrator never touches your code or credentials. Sprites are pre-authenticated and scoped.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Deploy SpriteSwarm in 5 minutes
+  </Card>
+  <Card title="Examples" icon="lightbulb" href="/examples/overview">
+    See real-world automation recipes
+  </Card>
+</CardGroup>

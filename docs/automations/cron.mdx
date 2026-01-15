@@ -1,0 +1,91 @@
+---
+title: Cron Schedules
+description: 'Run automations on a schedule'
+---
+
+Cron automations run on a schedule instead of waiting for webhooks. Perfect for daily reports, periodic checks, and recurring tasks.
+
+## Configuration
+
+```yaml
+source:
+  type: cron
+  schedule: "0 9 * * 1-5"  # 9am weekdays
+```
+
+## Cron Expression Format
+
+```
+┌────────── minute (0-59)
+│ ┌──────── hour (0-23)
+│ │ ┌────── day of month (1-31)
+│ │ │ ┌──── month (1-12)
+│ │ │ │ ┌── day of week (0-7, 0 and 7 are Sunday)
+│ │ │ │ │
+* * * * *
+```
+
+## Common Patterns
+
+| Expression | Meaning |
+|------------|---------|
+| `0 9 * * *` | Every day at 9am |
+| `0 9 * * 1-5` | Weekdays at 9am |
+| `0 16 * * 5` | Fridays at 4pm |
+| `0 0 * * *` | Midnight daily |
+| `*/15 * * * *` | Every 15 minutes |
+| `0 */2 * * *` | Every 2 hours |
+| `0 0 1 * *` | First of each month |
+| `0 9 * * 1` | Mondays at 9am |
+
+## Examples
+
+### Daily Report
+
+```yaml
+id: daily-metrics
+source:
+  type: cron
+  schedule: "0 9 * * 1-5"
+sprite:
+  name: analytics-agent
+run: Generate daily metrics report and post to Slack.
+```
+
+### Weekly Summary
+
+```yaml
+id: weekly-summary
+source:
+  type: cron
+  schedule: "0 16 * * 5"
+sprite:
+  name: reporting-agent
+run: Create weekly engineering summary for #team channel.
+```
+
+### Hourly Health Check
+
+```yaml
+id: health-check
+source:
+  type: cron
+  schedule: "0 * * * *"
+sprite:
+  name: ops-agent
+run: Check system health. Alert if issues found.
+```
+
+## Timezone
+
+Cron schedules run in the server's timezone (UTC by default on Fly.io). Adjust your expressions accordingly.
+
+<Tip>
+For 9am Pacific (PST/PDT), use `0 17 * * *` (UTC) or `0 16 * * *` (during daylight saving).
+</Tip>
+
+## No Payload
+
+Cron automations don't have a `payload`—there's no incoming event data. Template variables like `{{payload.x}}` won't work.
+
+You can still use `{{sprite.workdir}}` and hard-coded values in your command.

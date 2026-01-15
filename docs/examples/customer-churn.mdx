@@ -1,0 +1,229 @@
+---
+title: Customer Churn
+description: 'Detect cancellations and draft personalized win-back emails'
+icon: 'user-minus'
+---
+
+When a customer cancels their subscription, your Sprite investigates their usage history, identifies why they might have churned, and drafts a personalized win-back email.
+
+## Basic Churn Alert
+
+```yaml customer-churn-alert.yaml
+id: customer-churn-alert
+description: Investigate churned customers and draft win-back emails
+
+sprite:
+  name: customer-success-agent
+  workdir: /home/user/workspace
+
+source:
+  type: webhook
+  event: customer.subscription.deleted
+
+run: |
+  A customer cancelled their subscription.
+
+  Customer ID: {{payload.data.object.customer}}
+  Subscription ID: {{payload.data.object.id}}
+  Plan: {{payload.data.object.plan.nickname}}
+
+  ## Investigation
+
+  1. **Check PostHog** for their recent activity
+     - When did they last use the product?
+     - Which features did they use most?
+     - Any drop-off in engagement?
+
+  2. **Check Intercom** for support history
+     - Any recent complaints?
+     - Unresolved issues?
+     - Feature requests?
+
+  3. **Check Stripe** for payment history
+     - How long were they a customer?
+     - What plan were they on?
+     - Any failed payments?
+
+  ## Draft Win-Back Email
+
+  Based on your findings, draft a personalized email:
+  - Acknowledge their departure
+  - Address likely pain points
+  - Offer relevant solution or incentive
+  - Keep it genuine, not pushy
+
+  Save the draft in the CRM for human review.
+  Do NOT send automatically.
+```
+
+---
+
+## Stripe Webhook Setup
+
+### 1. Configure in Stripe
+
+1. Go to **Developers** → **Webhooks** → **Add endpoint**
+2. Endpoint URL: `https://your-app.fly.dev/webhook/stripe`
+3. Events: `customer.subscription.deleted`
+
+### 2. Verify Signatures
+
+SpriteSwarm should validate Stripe webhook signatures. Add your webhook signing secret:
+
+```env
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+---
+
+## Segmented Responses
+
+Different responses for different customer types:
+
+```yaml enterprise-churn.yaml
+id: enterprise-churn-alert
+description: High-touch response for enterprise churn
+
+sprite:
+  name: customer-success-agent
+
+source:
+  type: webhook
+  event: customer.subscription.deleted
+
+match:
+  - payload.data.object.plan.nickname == "Enterprise"
+
+run: |
+  ⚠️ Enterprise customer churned!
+
+  This requires immediate attention.
+
+  1. Pull their full account history
+  2. Identify their main contact
+  3. Draft a personalized message
+  4. Alert the account manager
+  5. Schedule follow-up tasks
+
+  Post to #enterprise-alerts immediately.
+```
+
+```yaml self-serve-churn.yaml
+id: self-serve-churn
+description: Automated response for self-serve churn
+
+sprite:
+  name: customer-success-agent
+
+source:
+  type: webhook
+  event: customer.subscription.deleted
+
+match:
+  - payload.data.object.plan.nickname == "Starter"
+
+run: |
+  Self-serve customer cancelled.
+
+  Quick analysis:
+  - Usage in last 30 days
+  - Time since signup
+  - Features used
+
+  Draft a templated but personalized win-back email.
+  Queue for sending in 3 days (give them space).
+```
+
+---
+
+## Trial Expiration Follow-Up
+
+```yaml trial-expired.yaml
+id: trial-expired-followup
+description: Follow up on expired trials
+
+sprite:
+  name: customer-success-agent
+
+source:
+  type: webhook
+  event: customer.subscription.updated
+
+match:
+  - payload.data.object.status == "canceled"
+  - payload.data.previous_attributes.status == "trialing"
+
+run: |
+  A trial just expired without converting.
+
+  Customer: {{payload.data.object.customer}}
+
+  1. Check their trial activity
+     - Did they actively use the product?
+     - Which features did they try?
+     - Did they hit any blockers?
+
+  2. Segment them:
+     - Active but didn't convert → needs follow-up
+     - Never engaged → different approach
+     - Hit technical issues → address those
+
+  3. Draft appropriate outreach
+     - Active users: ask what held them back
+     - Inactive: offer extended trial or demo
+     - Technical issues: offer help
+
+  Save to CRM for sales team review.
+```
+
+---
+
+## Stripe Payload Reference
+
+```json
+{
+  "type": "customer.subscription.deleted",
+  "data": {
+    "object": {
+      "id": "sub_123456",
+      "customer": "cus_789012",
+      "status": "canceled",
+      "canceled_at": 1705312800,
+      "plan": {
+        "id": "plan_abc",
+        "nickname": "Pro Monthly",
+        "amount": 4900
+      },
+      "metadata": {
+        "company": "Acme Inc"
+      }
+    }
+  }
+}
+```
+
+### Template Variables
+
+| Variable | Description |
+|----------|-------------|
+| `{{payload.data.object.customer}}` | Stripe customer ID |
+| `{{payload.data.object.id}}` | Subscription ID |
+| `{{payload.data.object.plan.nickname}}` | Plan name |
+| `{{payload.data.object.status}}` | `canceled` |
+| `{{payload.data.object.metadata.company}}` | Custom metadata |
+
+---
+
+## Sprite Configuration
+
+Your customer success Sprite needs:
+
+```bash
+# API credentials
+STRIPE_API_KEY=sk_...
+POSTHOG_API_KEY=phx_...
+INTERCOM_ACCESS_TOKEN=...
+
+# Optional: CRM integration
+HUBSPOT_API_KEY=...
+```

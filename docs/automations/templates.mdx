@@ -1,0 +1,122 @@
+---
+title: Template Variables
+description: 'Insert event data into your commands'
+---
+
+The `run` field supports Mustache templates. Insert data from the incoming event into your command.
+
+## Syntax
+
+```yaml
+run: |
+  Review PR #{{payload.pull_request.number}}
+  Title: {{payload.pull_request.title}}
+```
+
+## Available Variables
+
+| Variable | Description |
+|----------|-------------|
+| `{{payload.x.y.z}}` | Any field from the webhook payload |
+| `{{sprite.workdir}}` | The Sprite's working directory |
+
+## Accessing Payload Fields
+
+Use dot notation to access nested fields:
+
+```yaml
+run: |
+  Repository: {{payload.repository.full_name}}
+  Author: {{payload.pull_request.user.login}}
+  Branch: {{payload.pull_request.head.ref}}
+```
+
+## Array Access
+
+Access array elements with bracket notation:
+
+```yaml
+run: |
+  First label: {{payload.issue.labels.0.name}}
+```
+
+<Note>
+Array indexing uses `.0`, `.1` etc. in Mustache notation.
+</Note>
+
+## Missing Values
+
+If a template variable doesn't exist, it renders as an empty string:
+
+```yaml
+run: |
+  Optional field: {{payload.optional.field}}
+```
+
+If `payload.optional.field` is missing, the output will be:
+```
+Optional field:
+```
+
+## Escaping
+
+Template variables are **not HTML-escaped** (SpriteSwarm disables Mustache's default escaping). This is intentional for shell commands.
+
+## Examples
+
+### GitHub PR Review
+
+```yaml
+run: |
+  Review this pull request.
+
+  Repo: {{payload.repository.full_name}}
+  PR: #{{payload.pull_request.number}}
+  Title: {{payload.pull_request.title}}
+  Author: {{payload.pull_request.user.login}}
+
+  Base: {{payload.pull_request.base.ref}}
+  Head: {{payload.pull_request.head.ref}}
+```
+
+### Slack Message
+
+```yaml
+run: |
+  Respond to this Slack message.
+
+  Channel: {{payload.event.channel}}
+  User: {{payload.event.user}}
+  Text: {{payload.event.text}}
+  Thread: {{payload.event.thread_ts}}
+```
+
+### Stripe Event
+
+```yaml
+run: |
+  Customer subscription changed.
+
+  Customer: {{payload.data.object.customer}}
+  Status: {{payload.data.object.status}}
+  Plan: {{payload.data.object.plan.nickname}}
+```
+
+## Using workdir
+
+Reference the Sprite's working directory:
+
+```yaml
+sprite:
+  name: my-sprite
+  workdir: /home/user/repos/myapp
+
+run: |
+  cd {{sprite.workdir}} && git pull origin main
+```
+
+## Cron Limitations
+
+Cron automations have no payload—they're triggered by time, not events. Template variables like `{{payload.x}}` won't work in cron automations.
+
+Use `{{sprite.workdir}}` or hard-coded values instead.

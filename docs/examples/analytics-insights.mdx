@@ -1,0 +1,362 @@
+---
+title: Analytics Insights
+description: 'Daily AI-powered analysis of your PostHog, Amplitude, or Mixpanel data'
+icon: 'chart-line'
+---
+
+One of the most valuable automations you can build is a daily AI analyst that reviews your product metrics, spots trends, and posts insights to Slack. Instead of manually checking dashboards, let Claude surface what matters.
+
+## What This Does
+
+Every morning (or evening), your Sprite:
+
+1. Queries your analytics platform (PostHog, Amplitude, Mixpanel)
+2. Analyzes key metrics and compares to previous periods
+3. Identifies anomalies, trends, and notable changes
+4. Posts a concise summary to Slack with actionable insights
+
+---
+
+## PostHog Daily Insights
+
+```yaml daily-posthog-insights.yaml
+id: daily-posthog-insights
+description: AI-powered daily analysis of PostHog metrics
+
+sprite:
+  name: analytics-agent
+  workdir: /home/user/workspace
+
+source:
+  type: cron
+  schedule: "0 9 * * 1-5"  # 9am weekdays
+
+run: |
+  You are an analytics expert. Query PostHog and provide daily insights.
+
+  ## Your Task
+
+  1. **Query PostHog API** for the last 24 hours:
+     - Daily Active Users (DAU)
+     - Key conversion funnels
+     - Feature usage breakdown
+     - Error rates and page load times
+     - New vs returning users
+
+  2. **Compare to benchmarks**:
+     - Yesterday's numbers
+     - Same day last week
+     - 7-day rolling average
+
+  3. **Identify what's notable**:
+     - Significant increases or decreases (>10% change)
+     - Anomalies that warrant investigation
+     - Trends developing over the past week
+     - Features gaining or losing traction
+
+  4. **Post to Slack** (#analytics channel):
+     - Lead with the most important insight
+     - Include 3-5 bullet points of key observations
+     - Add context on what might be causing changes
+     - Suggest any actions the team should consider
+
+  ## Guidelines
+
+  - Be concise—executives will read this
+  - Focus on "so what" not just "what"
+  - Flag anything that needs immediate attention
+  - Include relevant numbers but don't overwhelm
+
+  Use your POSTHOG_API_KEY environment variable to authenticate.
+```
+
+---
+
+## Example Output
+
+Here's what your Sprite might post to Slack:
+
+```
+📊 Daily Analytics Report - January 14
+
+🔥 Key Insight: Sign-up conversion jumped 23% after yesterday's
+landing page update. Worth monitoring if this holds.
+
+• DAU: 12,450 (+8% vs last week)
+• Sign-ups: 342 (23% above 7-day avg)
+• Feature adoption: "Export to PDF" usage up 45%
+• Churn signal: 3 enterprise accounts showed reduced activity
+
+⚠️ Watch: Mobile bounce rate increased 12%—may need investigation.
+
+💡 Recommendation: The landing page change is working. Consider
+A/B testing the CTA copy next.
+```
+
+---
+
+## Amplitude Version
+
+```yaml daily-amplitude-insights.yaml
+id: daily-amplitude-insights
+description: Daily Amplitude analytics with AI analysis
+
+sprite:
+  name: analytics-agent
+
+source:
+  type: cron
+  schedule: "0 8 * * *"  # 8am daily
+
+run: |
+  Query Amplitude's API and analyze our product metrics.
+
+  Focus on:
+  - User retention (D1, D7, D30)
+  - Conversion funnel performance
+  - Feature engagement scores
+  - Cohort comparisons
+
+  Compare today's metrics to:
+  - Yesterday
+  - Same day last week
+  - Monthly average
+
+  Post findings to #product-metrics Slack channel.
+  Highlight anything that needs the team's attention.
+
+  Use AMPLITUDE_API_KEY and AMPLITUDE_SECRET_KEY to authenticate.
+```
+
+---
+
+## Mixpanel Version
+
+```yaml daily-mixpanel-insights.yaml
+id: daily-mixpanel-insights
+description: Daily Mixpanel analytics review
+
+sprite:
+  name: analytics-agent
+
+source:
+  type: cron
+  schedule: "0 9 * * 1-5"
+
+run: |
+  Query Mixpanel for key metrics and provide analysis.
+
+  Pull these reports:
+  - Engagement metrics (events per user)
+  - Funnel conversion rates
+  - User segmentation breakdown
+  - Revenue metrics if available
+
+  Analyze trends and post insights to Slack.
+  Flag any metrics that are off from normal ranges.
+```
+
+---
+
+## Weekly Deep Dive
+
+For more comprehensive analysis, add a weekly report:
+
+```yaml weekly-analytics-deep-dive.yaml
+id: weekly-analytics-deep-dive
+description: In-depth weekly analytics review
+
+sprite:
+  name: analytics-agent
+
+source:
+  type: cron
+  schedule: "0 16 * * 5"  # 4pm Friday
+
+run: |
+  Prepare a comprehensive weekly analytics report.
+
+  ## Analysis Required
+
+  1. **Week-over-week comparison**
+     - All key metrics vs previous week
+     - Trend direction for each metric
+
+  2. **Funnel analysis**
+     - Where are users dropping off?
+     - Which steps improved/degraded?
+
+  3. **Cohort performance**
+     - How are recent signups retaining?
+     - Compare to older cohorts
+
+  4. **Feature adoption**
+     - Which features are gaining traction?
+     - Which are underutilized?
+
+  5. **Recommendations**
+     - Top 3 things to investigate
+     - Quick wins to consider
+     - Risks to monitor
+
+  Post to #analytics with the full report.
+  Also create a shorter summary for #leadership.
+```
+
+---
+
+## Sprite Setup
+
+Your analytics Sprite needs API credentials:
+
+### PostHog
+
+```bash
+POSTHOG_API_KEY=phx_your_api_key
+POSTHOG_PROJECT_ID=12345
+POSTHOG_HOST=https://app.posthog.com  # or your self-hosted URL
+```
+
+API endpoints your Sprite will use:
+- `GET /api/projects/{project_id}/insights/trend/`
+- `GET /api/projects/{project_id}/events/`
+- `GET /api/projects/{project_id}/persons/`
+
+### Amplitude
+
+```bash
+AMPLITUDE_API_KEY=your_api_key
+AMPLITUDE_SECRET_KEY=your_secret_key
+```
+
+### Mixpanel
+
+```bash
+MIXPANEL_TOKEN=your_project_token
+MIXPANEL_API_SECRET=your_api_secret
+```
+
+---
+
+## Customizing Metrics
+
+Adjust the automation to focus on metrics that matter for your business:
+
+### SaaS Metrics
+
+```yaml
+run: |
+  Focus on these SaaS metrics:
+  - MRR and ARR trends
+  - Trial-to-paid conversion
+  - Net revenue retention
+  - Feature adoption by plan tier
+  - Expansion revenue signals
+```
+
+### E-commerce Metrics
+
+```yaml
+run: |
+  Focus on these e-commerce metrics:
+  - Conversion rate by traffic source
+  - Cart abandonment rate
+  - Average order value
+  - Product page engagement
+  - Checkout funnel drop-off
+```
+
+### Consumer App Metrics
+
+```yaml
+run: |
+  Focus on these consumer metrics:
+  - DAU/MAU ratio
+  - Session length and frequency
+  - Feature stickiness
+  - Viral coefficient (invites sent)
+  - Push notification engagement
+```
+
+---
+
+## Multi-Tool Analysis
+
+Combine data from multiple sources for richer insights:
+
+```yaml comprehensive-daily-report.yaml
+id: comprehensive-daily-report
+description: Combined analytics from multiple sources
+
+sprite:
+  name: analytics-agent
+
+source:
+  type: cron
+  schedule: "0 9 * * 1-5"
+
+run: |
+  Generate a comprehensive daily report combining:
+
+  1. **PostHog**: User behavior and feature usage
+  2. **Stripe**: Revenue and subscription metrics
+  3. **Intercom**: Support volume and sentiment
+  4. **Sentry**: Error rates and stability
+
+  Correlate insights across sources:
+  - Did a spike in errors affect conversion?
+  - Are support tickets related to a feature change?
+  - How does engagement correlate with revenue?
+
+  Post the unified report to #daily-standup.
+```
+
+---
+
+## Alerting on Anomalies
+
+Add a more frequent check for critical metrics:
+
+```yaml analytics-anomaly-alert.yaml
+id: analytics-anomaly-alert
+description: Check for metric anomalies every hour
+
+sprite:
+  name: analytics-agent
+
+source:
+  type: cron
+  schedule: "0 * * * *"  # Every hour
+
+run: |
+  Quick check for anomalies in key metrics.
+
+  Alert thresholds:
+  - Conversion rate drops >20% from hourly average
+  - Error rate exceeds 5%
+  - DAU drops >15% from expected
+
+  If anomalies detected:
+  - Post alert to #alerts Slack channel
+  - Include what changed and when
+  - Suggest potential causes
+
+  If everything normal:
+  - No action needed (don't spam the channel)
+```
+
+---
+
+## Tips
+
+<Tip>
+Start with a simple daily report and iterate. Add more metrics and analysis as you learn what's valuable to your team.
+</Tip>
+
+<Note>
+Your Sprite can cache previous day's data to make comparisons faster and reduce API calls.
+</Note>
+
+<Warning>
+Be mindful of API rate limits. PostHog, Amplitude, and Mixpanel all have limits on query frequency.
+</Warning>

@@ -1,0 +1,81 @@
+---
+title: Examples Overview
+description: 'Real-world automation recipes for SpriteSwarm'
+---
+
+These examples show how to use SpriteSwarm for common automation tasks. Each includes a complete YAML file you can customize and deploy.
+
+## Featured Examples
+
+<CardGroup cols={2}>
+  <Card title="Slack Trigger" icon="slack" href="/examples/slack-trigger">
+    Run Sprites from Slack messages—ask questions, trigger workflows, or kick off tasks by mentioning your bot.
+  </Card>
+  <Card title="Analytics Insights" icon="chart-line" href="/examples/analytics-insights">
+    Daily AI-powered analysis of your PostHog, Amplitude, or Mixpanel data with insights posted to Slack.
+  </Card>
+  <Card title="GitHub PR Review" icon="github" href="/examples/github-pr-review">
+    Automated code review using Claude when pull requests are opened.
+  </Card>
+  <Card title="Error Triage" icon="bug" href="/examples/error-triage">
+    Analyze Sentry errors and create Linear issues with AI-suggested fixes.
+  </Card>
+  <Card title="Customer Churn" icon="user-minus" href="/examples/customer-churn">
+    Detect subscription cancellations and draft personalized win-back emails.
+  </Card>
+</CardGroup>
+
+## By Trigger Type
+
+### Webhook-Triggered
+
+| Example | Source | Event |
+|---------|--------|-------|
+| [Slack Trigger](/examples/slack-trigger) | Slack | `app_mention`, `message` |
+| [GitHub PR Review](/examples/github-pr-review) | GitHub | `pull_request.opened` |
+| [Error Triage](/examples/error-triage) | Sentry | `issue.created` |
+| [Customer Churn](/examples/customer-churn) | Stripe | `customer.subscription.deleted` |
+
+### Cron-Scheduled
+
+| Example | Schedule | Description |
+|---------|----------|-------------|
+| [Analytics Insights](/examples/analytics-insights) | Daily 9am | PostHog metrics analysis |
+| [Weekly Report](/examples/github-pr-review#weekly-engineering-report) | Friday 4pm | Engineering activity summary |
+
+## Quick Start
+
+1. Copy an example YAML file
+2. Update the `sprite.name` to match your Sprite in Sprites.dev
+3. Customize the `run` command for your use case
+4. Upload to SpriteSwarm:
+
+```bash
+curl -X POST https://your-app.fly.dev/admin/automations \
+  -H "X-Admin-Token: your-token" \
+  -H "Content-Type: text/yaml" \
+  --data-binary @your-automation.yaml
+```
+
+## Building Your Own
+
+Every automation follows the same pattern:
+
+```yaml
+id: unique-identifier
+
+sprite:
+  name: your-sprite-name
+
+source:
+  type: webhook  # or cron
+  event: some.event
+
+match:
+  - payload.field == "value"  # optional filters
+
+run: |
+  Your command with {{payload.variables}}
+```
+
+See [Writing Automations](/automations/overview) for the full reference.

@@ -1,0 +1,126 @@
+---
+title: Match Conditions
+description: 'Filter which events trigger your automations'
+---
+
+The `match` field filters incoming events. Only events matching all conditions will trigger the automation.
+
+## Syntax
+
+```yaml
+match:
+  - payload.field == "value"
+  - payload.nested.field == "other"
+```
+
+Each condition is a JSONPath equality expression.
+
+## Rules
+
+- **All conditions must pass** (AND logic)
+- **Empty match = matches everything**
+- Supports **strings**, **numbers**, and **booleans**
+- Access nested fields with **dot notation**
+- Access array elements with **bracket notation**
+
+## Examples
+
+### Match by Action
+
+```yaml
+match:
+  - payload.action == "opened"
+```
+
+### Multiple Conditions
+
+```yaml
+match:
+  - payload.action == "opened"
+  - payload.pull_request.draft == false
+  - payload.pull_request.base.ref == "main"
+```
+
+### Nested Fields
+
+```yaml
+match:
+  - payload.data.issue.level == "error"
+  - payload.data.issue.project.slug == "backend"
+```
+
+### Array Elements
+
+```yaml
+match:
+  - payload.issue.labels[0].name == "bug"
+```
+
+### Boolean Values
+
+```yaml
+match:
+  - payload.pull_request.merged == true
+```
+
+### Numeric Values
+
+```yaml
+match:
+  - payload.data.object.amount == 4900
+```
+
+## Common Patterns
+
+### GitHub PR to Main
+
+```yaml
+match:
+  - payload.action == "opened"
+  - payload.pull_request.base.ref == "main"
+  - payload.pull_request.draft == false
+```
+
+### Sentry Errors Only
+
+```yaml
+match:
+  - payload.action == "created"
+  - payload.data.issue.level == "error"
+```
+
+### Slack App Mentions
+
+```yaml
+match:
+  - payload.event.type == "app_mention"
+```
+
+### Stripe Subscription Events
+
+```yaml
+match:
+  - payload.data.object.status == "canceled"
+```
+
+## No Match Field
+
+If you omit the `match` field entirely, the automation matches all events of the specified type:
+
+```yaml
+source:
+  type: webhook
+  event: push
+
+# No match field = triggers on ALL push events
+run: Handle the push...
+```
+
+## Limitations
+
+- **Equality only**: No `>`, `<`, `!=`, or regex
+- **AND logic only**: No OR conditions
+- **No functions**: Can't call functions on values
+- **Case-sensitive**: String matching is exact
+
+For complex filtering, handle the logic in your Sprite's command.

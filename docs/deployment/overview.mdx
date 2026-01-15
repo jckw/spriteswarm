@@ -1,0 +1,69 @@
+---
+title: Deployment
+description: 'Deploy SpriteSwarm to production'
+---
+
+SpriteSwarm runs as a long-lived Node.js server. The recommended setup is Fly.io for hosting with Cloudflare KV for storage.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                       Fly.io                            │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │              SpriteSwarm Server                  │   │
+│  │  - Receives webhooks                            │   │
+│  │  - Evaluates automations                        │   │
+│  │  - Runs cron scheduler                          │   │
+│  │  - Dispatches to Sprites                        │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+              │                           │
+              ▼                           ▼
+    ┌─────────────────┐         ┌─────────────────┐
+    │  Cloudflare KV  │         │   Sprites.dev   │
+    │  (Automations)  │         │   (Execution)   │
+    └─────────────────┘         └─────────────────┘
+```
+
+## Requirements
+
+- **Node.js 22+** runtime
+- **Cloudflare account** for KV storage
+- **Sprites.dev account** for execution
+- **Fly.io account** (or similar) for hosting
+
+## Quick Deploy
+
+```bash
+# Clone
+git clone https://github.com/jckw/spriteswarm
+cd spriteswarm
+
+# Configure
+cp .env.example .env
+# Edit .env with your values
+
+# Deploy
+fly launch
+fly secrets set SPRITES_TOKEN=xxx ADMIN_TOKEN=xxx ...
+```
+
+## Configuration
+
+See [Environment Variables](/deployment/environment) for the complete list.
+
+## Alternatives
+
+While Fly.io is recommended, SpriteSwarm runs on any Node.js host:
+
+- **Railway** - Similar to Fly.io
+- **Render** - Easy deployment
+- **DigitalOcean App Platform** - Simple container hosting
+- **AWS ECS/Fargate** - Enterprise option
+- **Self-hosted** - Any server with Node.js
+
+The key requirements are:
+1. Persistent process (not serverless)
+2. HTTPS endpoint for webhooks
+3. Network access to Cloudflare and Sprites.dev APIs

@@ -1,0 +1,122 @@
+---
+title: Webhook Sources
+description: 'Trigger automations from external services'
+---
+
+Webhooks let external services trigger your automations when events happen—like a new PR, a Slack message, or a customer cancellation.
+
+## Configuration
+
+```yaml
+source:
+  type: webhook
+  event: pull_request.opened
+```
+
+SpriteSwarm receives webhooks at `/webhook/:source`:
+
+| URL | Service |
+|-----|---------|
+| `/webhook/github` | GitHub |
+| `/webhook/slack` | Slack |
+| `/webhook/stripe` | Stripe |
+| `/webhook/sentry` | Sentry |
+| `/webhook/intercom` | Intercom |
+| `/webhook/custom` | Any service |
+
+## Supported Sources
+
+### GitHub
+
+```yaml
+source:
+  type: webhook
+  event: pull_request  # or issues, push, release, etc.
+```
+
+Events: `pull_request`, `issues`, `push`, `release`, `workflow_run`, and more.
+
+Set `GITHUB_WEBHOOK_SECRET` for signature validation.
+
+### Slack
+
+```yaml
+source:
+  type: webhook
+  event: event_callback
+```
+
+Events: `app_mention`, `message`, `reaction_added`, etc.
+
+### Stripe
+
+```yaml
+source:
+  type: webhook
+  event: customer.subscription.deleted
+```
+
+Events: Any Stripe webhook event type.
+
+### Sentry
+
+```yaml
+source:
+  type: webhook
+  event: issue
+```
+
+Events: `issue`, `error`, `metric_alert`, etc.
+
+## Event Matching
+
+The `event` field matches against the webhook's event type:
+
+- **GitHub**: The `X-GitHub-Event` header combined with `action`
+- **Slack**: The `event.type` field
+- **Stripe**: The `type` field
+- **Others**: Varies by service
+
+## Multiple Events
+
+Create separate automations for different events:
+
+```yaml
+# pr-opened.yaml
+id: pr-opened
+source:
+  type: webhook
+  event: pull_request
+match:
+  - payload.action == "opened"
+run: Review this new PR...
+
+# pr-merged.yaml
+id: pr-merged
+source:
+  type: webhook
+  event: pull_request
+match:
+  - payload.action == "closed"
+  - payload.pull_request.merged == true
+run: Celebrate this merged PR...
+```
+
+## Custom Webhooks
+
+For services without a specific adapter, use `/webhook/custom`:
+
+```yaml
+source:
+  type: webhook
+  event: my-event-type
+```
+
+Trigger with:
+
+```bash
+curl -X POST https://your-app.fly.dev/webhook/custom \
+  -H "Content-Type: application/json" \
+  -H "X-Event-Type: my-event-type" \
+  -d '{"data": "your payload"}'
+```

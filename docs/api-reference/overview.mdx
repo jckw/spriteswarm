@@ -1,0 +1,75 @@
+---
+title: API Overview
+description: 'SpriteSwarm API reference'
+---
+
+SpriteSwarm exposes three types of endpoints:
+
+## Webhook Endpoints
+
+Receive events from external services.
+
+```
+POST /webhook/:source
+```
+
+No authentication required (uses source-specific validation like HMAC signatures).
+
+## Admin Endpoints
+
+Manage automations. Requires `X-Admin-Token` header.
+
+```
+GET    /admin/automations        # List all
+GET    /admin/automations/:id    # Get one
+POST   /admin/automations        # Create/update
+DELETE /admin/automations/:id    # Delete
+```
+
+## Health Endpoint
+
+Check service status.
+
+```
+GET /health
+```
+
+Returns `200 OK` with `{"status": "ok"}`.
+
+## Authentication
+
+### Webhooks
+
+Each source has its own validation:
+- **GitHub**: HMAC signature in `X-Hub-Signature-256`
+- **Slack**: Request signature validation
+- **Stripe**: Webhook signature validation
+
+### Admin API
+
+Include your admin token in the header:
+
+```bash
+curl -H "X-Admin-Token: your-token" \
+  https://your-app.fly.dev/admin/automations
+```
+
+## Response Format
+
+All endpoints return JSON:
+
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+Or on error:
+
+```json
+{
+  "success": false,
+  "error": "Error message"
+}
+```

@@ -1,0 +1,104 @@
+---
+title: Environment Variables
+description: 'Complete list of configuration options'
+---
+
+## Required Variables
+
+| Variable | Description |
+|----------|-------------|
+| `SPRITES_TOKEN` | API token from Sprites.dev |
+| `ADMIN_TOKEN` | Secret for admin API endpoints |
+| `CF_ACCOUNT_ID` | Cloudflare account ID |
+| `CF_API_TOKEN` | Cloudflare API token (needs KV access) |
+| `CF_KV_NAMESPACE_ID` | Cloudflare KV namespace ID |
+
+## Optional Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8080` | Server port |
+| `GITHUB_WEBHOOK_SECRET` | - | GitHub webhook HMAC secret |
+| `STRIPE_WEBHOOK_SECRET` | - | Stripe webhook signing secret |
+| `SLACK_SIGNING_SECRET` | - | Slack request signing secret |
+
+## Getting Credentials
+
+### Sprites.dev Token
+
+1. Log in to [Sprites.dev](https://sprites.dev)
+2. Go to Settings → API Tokens
+3. Create a new token
+
+### Cloudflare KV
+
+```bash
+# Install Wrangler
+npm install -g wrangler
+
+# Login
+wrangler login
+
+# Create namespace
+wrangler kv:namespace create "spriteswarm"
+# Copy the namespace ID
+
+# Get account ID (shown after login or in dashboard URL)
+```
+
+Create an API token at [Cloudflare Dashboard](https://dash.cloudflare.com/profile/api-tokens):
+- Template: "Edit Cloudflare Workers"
+- Or custom with KV read/write permissions
+
+### GitHub Webhook Secret
+
+Generate a secure random string:
+
+```bash
+openssl rand -hex 32
+```
+
+Use this same value when configuring the webhook in GitHub.
+
+### Admin Token
+
+Generate a secure random string:
+
+```bash
+openssl rand -hex 32
+```
+
+Keep this secret—it provides full access to manage automations.
+
+## Example .env File
+
+```env
+# Server
+PORT=8080
+
+# Sprites.dev
+SPRITES_TOKEN=spr_xxxxxxxxxxxxx
+
+# Admin
+ADMIN_TOKEN=your-secure-admin-token
+
+# Cloudflare KV
+CF_ACCOUNT_ID=xxxxxxxxxxxxxxxx
+CF_API_TOKEN=xxxxxxxxxxxxxxxx
+CF_KV_NAMESPACE_ID=xxxxxxxxxxxxxxxx
+
+# Webhook Secrets (optional, but recommended)
+GITHUB_WEBHOOK_SECRET=xxxxxxxxxxxxxxxx
+STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxx
+SLACK_SIGNING_SECRET=xxxxxxxxxxxxxxxx
+```
+
+## Security Notes
+
+<Warning>
+Never commit secrets to version control. Use environment variables or secret managers.
+</Warning>
+
+- Rotate tokens periodically
+- Use separate tokens for development and production
+- Limit Cloudflare API token permissions to only what's needed

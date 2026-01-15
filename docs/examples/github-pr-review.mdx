@@ -1,0 +1,220 @@
+---
+title: GitHub PR Review
+description: 'Automated AI code review when pull requests are opened'
+icon: 'github'
+---
+
+Automatically review pull requests with Claude when they're opened. Your Sprite checks out the code, analyzes changes, and posts feedback directly to GitHub.
+
+## Basic PR Review
+
+```yaml pr-review.yaml
+id: pr-review
+description: AI code review on new pull requests
+
+sprite:
+  name: code-reviewer
+  workdir: /home/user/repos
+
+source:
+  type: webhook
+  event: pull_request
+
+match:
+  - payload.action == "opened"
+
+run: |
+  A new PR needs review.
+
+  Repository: {{payload.repository.full_name}}
+  PR Number: {{payload.pull_request.number}}
+  Title: {{payload.pull_request.title}}
+  Author: {{payload.pull_request.user.login}}
+  Branch: {{payload.pull_request.head.ref}} → {{payload.pull_request.base.ref}}
+
+  1. Clone or pull the repository
+  2. Check out the PR branch
+  3. Review the diff for:
+     - Code quality and best practices
+     - Potential bugs or edge cases
+     - Security concerns
+     - Performance implications
+     - Test coverage
+
+  4. Post your review as a GitHub comment on the PR
+```
+
+---
+
+## Setup GitHub Webhooks
+
+### 1. Configure the Webhook
+
+In your GitHub repository settings:
+
+1. Go to **Settings** → **Webhooks** → **Add webhook**
+2. Set Payload URL: `https://your-app.fly.dev/webhook/github`
+3. Content type: `application/json`
+4. Secret: Your `GITHUB_WEBHOOK_SECRET`
+5. Events: Select **Pull requests**
+
+### 2. Verify the Secret
+
+SpriteSwarm validates GitHub webhooks using HMAC signatures. Make sure your `GITHUB_WEBHOOK_SECRET` environment variable matches what you set in GitHub.
+
+---
+
+## Filter by Branch
+
+Only review PRs targeting specific branches:
+
+```yaml
+match:
+  - payload.action == "opened"
+  - payload.pull_request.base.ref == "main"
+```
+
+## Skip Draft PRs
+
+```yaml
+match:
+  - payload.action == "opened"
+  - payload.pull_request.draft == false
+```
+
+## Filter by File Type
+
+Review only when certain files change (handle in the Sprite):
+
+```yaml
+run: |
+  PR #{{payload.pull_request.number}} was opened.
+
+  Check if any of these file types were modified:
+  - *.ts, *.tsx (TypeScript)
+  - *.py (Python)
+  - *.go (Go)
+
+  If only docs or config files changed, leave a brief "LGTM" comment.
+  Otherwise, do a thorough code review.
+```
+
+---
+
+## Review Guidelines
+
+Give your Sprite specific guidelines:
+
+```yaml
+run: |
+  Review PR #{{payload.pull_request.number}}.
+
+  ## Review Checklist
+
+  ### Code Quality
+  - [ ] Follows project style guide
+  - [ ] No code duplication
+  - [ ] Clear naming conventions
+  - [ ] Appropriate abstractions
+
+  ### Security
+  - [ ] No hardcoded secrets
+  - [ ] Input validation present
+  - [ ] No SQL injection vulnerabilities
+  - [ ] Safe handling of user data
+
+  ### Performance
+  - [ ] No N+1 queries
+  - [ ] Efficient algorithms
+  - [ ] Appropriate caching
+
+  ### Testing
+  - [ ] New code has tests
+  - [ ] Edge cases covered
+  - [ ] Tests are meaningful
+
+  Post feedback using GitHub's review API.
+  Use "APPROVE", "REQUEST_CHANGES", or "COMMENT" appropriately.
+```
+
+---
+
+## Weekly Engineering Report
+
+Summarize repository activity weekly:
+
+```yaml weekly-report.yaml
+id: weekly-engineering-report
+description: Weekly summary of GitHub activity
+
+sprite:
+  name: reporting-agent
+  workdir: /home/user/workspace
+
+source:
+  type: cron
+  schedule: "0 16 * * 5"  # 4pm Friday
+
+run: |
+  Generate the weekly engineering report.
+
+  Query GitHub API for this week's activity:
+  - PRs opened, merged, and closed
+  - Issues created and resolved
+  - Top contributors
+  - Notable commits
+
+  Summarize:
+  - What shipped this week
+  - What's in progress
+  - Any blockers or concerns
+
+  Post to #engineering-updates Slack channel.
+```
+
+---
+
+## Payload Reference
+
+GitHub pull request webhook payload (key fields):
+
+```json
+{
+  "action": "opened",
+  "number": 42,
+  "pull_request": {
+    "number": 42,
+    "title": "Add new feature",
+    "body": "Description of changes...",
+    "state": "open",
+    "draft": false,
+    "user": {
+      "login": "octocat"
+    },
+    "head": {
+      "ref": "feature-branch",
+      "sha": "abc123..."
+    },
+    "base": {
+      "ref": "main"
+    },
+    "html_url": "https://github.com/org/repo/pull/42"
+  },
+  "repository": {
+    "full_name": "org/repo",
+    "clone_url": "https://github.com/org/repo.git"
+  }
+}
+```
+
+### Template Variables
+
+| Variable | Example |
+|----------|---------|
+| `{{payload.action}}` | `opened` |
+| `{{payload.pull_request.number}}` | `42` |
+| `{{payload.pull_request.title}}` | `Add new feature` |
+| `{{payload.pull_request.user.login}}` | `octocat` |
+| `{{payload.pull_request.head.ref}}` | `feature-branch` |
+| `{{payload.pull_request.base.ref}}` | `main` |
+| `{{payload.repository.full_name}}` | `org/repo` |

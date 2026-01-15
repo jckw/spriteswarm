@@ -1,0 +1,221 @@
+---
+title: Core Concepts
+description: 'Understanding the building blocks of SpriteSwarm'
+---
+
+## Automations
+
+An **Automation** is a YAML file that defines a rule: when this event happens, run this command on that Sprite.
+
+```yaml
+id: my-automation
+description: What this automation does
+
+sprite:
+  name: my-sprite
+  workdir: /home/user/repo
+
+source:
+  type: webhook
+  event: issue.created
+
+match:
+  - payload.issue.labels[0].name == "bug"
+
+run: |
+  Analyze this bug report and suggest a fix:
+  Title: {{payload.issue.title}}
+  Body: {{payload.issue.body}}
+```
+
+Every automation has five key parts:
+
+| Field | Purpose |
+|-------|---------|
+| `id` | Unique identifier for this automation |
+| `sprite` | Which Sprite executes the command |
+| `source` | Where events come from (webhook or cron) |
+| `match` | Optional conditions to filter events |
+| `run` | The command template to execute |
+
+## Sprites
+
+A **Sprite** is a persistent, non-ephemeral environment from [Sprites.dev](https://sprites.dev). Think of each Sprite as a specific person with their own tools, credentials, and workspace—not a Docker container that gets recreated each time.
+
+### Setting Up a Sprite
+
+You configure a Sprite the same way you'd set up a developer workstation:
+
+1. **Create the Sprite** in Sprites.dev
+2. **Install tools** — Claude Code, CLIs, whatever you need
+3. **Connect services** — Set up MCP servers for PostHog, GitHub, Slack, etc.
+4. **Add credentials** — API keys, OAuth tokens, SSH keys
+5. **Clone repos** — Pre-clone any codebases you want to work with
+
+Once configured, the Sprite is ready to receive commands from SpriteSwarm.
+
+### Persistence
+
+Sprites aren't ephemeral. The storage persists between invocations:
+
+- Files you create stay there
+- Context from previous runs is available
+- You could store notes, cache data, or maintain state
+
+This means a Sprite handling Slack messages could remember conversation context, or a reporting Sprite could compare today's metrics to yesterday's cached values.
+
+### Concurrency
+
+<Tip>
+For tool-based work (using MCPs), you can run many Claude Code instances on a single Sprite simultaneously.
+</Tip>
+
+<Warning>
+For file system work (code changes), be careful with concurrency. If you pre-clone a repo, two concurrent tasks modifying the same files will conflict. Consider using separate Sprites for concurrent code work, or accept that some automations should run one at a time.
+</Warning>
+
+### Example: Analytics Sprite
+
+To set up a Sprite that analyzes PostHog data:
+
+1. Create a new Sprite called `analytics-agent`
+2. Install Claude Code
+3. Connect the PostHog MCP with your API key
+4. Connect the Slack MCP for posting results
+
+Now this Sprite can query PostHog and post to Slack—just like you would from your desktop.
+
+### Referencing Sprites
+
+In your automations, reference Sprites by name:
+
+```yaml
+sprite:
+  name: analytics-agent      # Your Sprite's name in Sprites.dev
+  workdir: /home/user/data   # Optional working directory
+```
+
+## Event Sources
+
+Events can come from two places:
+
+### Webhooks
+
+External services send HTTP POST requests when things happen:
+
+```yaml
+source:
+  type: webhook
+  event: pull_request.opened   # GitHub event type
+```
+
+SpriteSwarm receives webhooks at `/webhook/:source`:
+- `/webhook/github` — GitHub webhooks
+- `/webhook/slack` — Slack events
+- `/webhook/stripe` — Stripe webhooks
+
+### Cron Schedules
+
+Time-based triggers using standard cron expressions:
+
+```yaml
+source:
+  type: cron
+  schedule: "0 9 * * 1-5"   # 9am weekdays
+```
+
+Common patterns:
+
+| Expression | Meaning |
+|------------|---------|
+| `0 9 * * *` | Every day at 9am |
+| `0 9 * * 1-5` | Weekdays at 9am |
+| `0 16 * * 5` | Fridays at 4pm |
+| `*/15 * * * *` | Every 15 minutes |
+| `0 0 1 * *` | First of the month |
+
+## Matching
+
+The `match` field filters which events trigger your automation. Each condition is a JSONPath equality expression:
+
+```yaml
+match:
+  - payload.action == "opened"
+  - payload.pull_request.base.ref == "main"
+  - payload.pull_request.draft == false
+```
+
+- All conditions must pass (AND logic)
+- Empty match = matches everything
+- Supports strings, numbers, and booleans
+
+<Info>
+Match expressions use JSONPath notation. `payload.issue.labels[0].name` accesses nested fields and array elements.
+</Info>
+
+## Templates
+
+The `run` field supports Mustache templates. Insert event data into your commands:
+
+```yaml
+run: |
+  Review PR #{{payload.pull_request.number}} in {{sprite.workdir}}
+
+  Title: {{payload.pull_request.title}}
+  Author: {{payload.pull_request.user.login}}
+
+  Analyze the changes and post feedback to GitHub.
+```
+
+Available variables:
+
+| Variable | Description |
+|----------|-------------|
+| `{{payload.x.y}}` | Any field from the webhook payload |
+| `{{sprite.workdir}}` | The Sprite's working directory |
+
+## Execution Flow
+
+When an event arrives:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 1. Event received (webhook or cron fires)              │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│ 2. Load all automations from KV storage                │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│ 3. Filter automations by source type and event         │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│ 4. Evaluate match conditions against payload           │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│ 5. Render command template with event data             │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│ 6. POST to Sprites API (fire-and-forget)               │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Webhooks" icon="webhook" href="/automations/webhooks">
+    Configure webhook sources
+  </Card>
+  <Card title="Cron Jobs" icon="clock" href="/automations/cron">
+    Set up scheduled automations
+  </Card>
+</CardGroup>

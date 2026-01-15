@@ -1,0 +1,257 @@
+---
+title: Slack Trigger
+description: 'Run Sprites from Slack messages'
+icon: 'slack'
+---
+
+One of the most powerful patterns with SpriteSwarm is triggering Sprites directly from Slack. Team members can ask questions, kick off tasks, or request analysis—all by messaging a bot.
+
+## Use Cases
+
+- **Ask Claude questions**: "@bot explain how our auth system works"
+- **Trigger deployments**: "@bot deploy staging to production"
+- **Request analysis**: "@bot analyze yesterday's error spike"
+- **Run reports**: "@bot generate the weekly metrics report"
+
+## Basic Setup
+
+### 1. Create a Slack App
+
+1. Go to [api.slack.com/apps](https://api.slack.com/apps)
+2. Click **Create New App** → **From scratch**
+3. Name it (e.g., "SpriteBot") and select your workspace
+
+### 2. Configure Event Subscriptions
+
+1. Go to **Event Subscriptions** → Enable Events
+2. Set Request URL to: `https://your-app.fly.dev/webhook/slack`
+3. Subscribe to bot events:
+   - `app_mention` — When someone @mentions your bot
+   - `message.channels` — Messages in channels (optional)
+   - `message.im` — Direct messages (optional)
+
+### 3. Add Bot Permissions
+
+Go to **OAuth & Permissions** and add these scopes:
+- `app_mentions:read`
+- `chat:write`
+- `channels:history`
+
+### 4. Install to Workspace
+
+Click **Install to Workspace** and authorize.
+
+---
+
+## Example: General Assistant
+
+This automation responds to any @mention of your bot:
+
+```yaml slack-assistant.yaml
+id: slack-assistant
+description: AI assistant triggered by Slack mentions
+
+sprite:
+  name: slack-agent
+  workdir: /home/user/workspace
+
+source:
+  type: webhook
+  event: event_callback
+
+match:
+  - payload.event.type == "app_mention"
+
+run: |
+  You received a message in Slack. Respond helpfully.
+
+  Channel: {{payload.event.channel}}
+  User: {{payload.event.user}}
+  Message: {{payload.event.text}}
+  Thread: {{payload.event.thread_ts}}
+
+  Use the Slack API to post your response back to the channel.
+  If this is in a thread, reply in the thread.
+```
+
+<Note>
+Your Sprite needs Slack API credentials configured to post responses. Set up a `SLACK_BOT_TOKEN` environment variable in your Sprite.
+</Note>
+
+---
+
+## Example: Code Review Request
+
+Let team members request code reviews by mentioning the bot with a PR link:
+
+```yaml slack-review-request.yaml
+id: slack-review-request
+description: Request a code review via Slack
+
+sprite:
+  name: code-reviewer
+  workdir: /home/user/repos
+
+source:
+  type: webhook
+  event: event_callback
+
+match:
+  - payload.event.type == "app_mention"
+
+run: |
+  Someone requested a code review in Slack.
+
+  Channel: {{payload.event.channel}}
+  User: {{payload.event.user}}
+  Message: {{payload.event.text}}
+
+  1. Parse the message to find any GitHub PR links
+  2. If a PR link is found, clone the repo and check out the PR
+  3. Review the code changes using your best judgment
+  4. Post a summary of your review back to the Slack thread
+
+  Be thorough but concise in your review.
+```
+
+---
+
+## Example: On-Demand Reports
+
+Trigger analytics reports with a simple Slack message:
+
+```yaml slack-report.yaml
+id: slack-report
+description: Generate reports on demand from Slack
+
+sprite:
+  name: analytics-agent
+  workdir: /home/user/workspace
+
+source:
+  type: webhook
+  event: event_callback
+
+match:
+  - payload.event.type == "app_mention"
+
+run: |
+  A team member requested a report via Slack.
+
+  Channel: {{payload.event.channel}}
+  User: {{payload.event.user}}
+  Request: {{payload.event.text}}
+
+  Based on their request, generate the appropriate report:
+  - If they mention "metrics" or "analytics", query PostHog
+  - If they mention "errors" or "bugs", check Sentry
+  - If they mention "revenue" or "sales", pull from Stripe
+
+  Format the report nicely and post it back to Slack.
+```
+
+---
+
+## Slack Event Payload
+
+When Slack sends an event, the payload looks like this:
+
+```json
+{
+  "type": "event_callback",
+  "event": {
+    "type": "app_mention",
+    "user": "U1234567890",
+    "text": "<@U0LAN0Z89> review this PR: https://github.com/org/repo/pull/42",
+    "channel": "C1234567890",
+    "ts": "1234567890.123456",
+    "thread_ts": "1234567890.123456"
+  },
+  "team_id": "T1234567890"
+}
+```
+
+### Available Template Variables
+
+| Variable | Description |
+|----------|-------------|
+| `{{payload.event.type}}` | Event type (`app_mention`, `message`) |
+| `{{payload.event.user}}` | Slack user ID who sent the message |
+| `{{payload.event.text}}` | The message text |
+| `{{payload.event.channel}}` | Channel ID |
+| `{{payload.event.ts}}` | Message timestamp |
+| `{{payload.event.thread_ts}}` | Thread timestamp (if in a thread) |
+| `{{payload.team_id}}` | Slack workspace ID |
+
+---
+
+## Advanced: Filtering by Channel
+
+Only respond in specific channels:
+
+```yaml
+match:
+  - payload.event.type == "app_mention"
+  - payload.event.channel == "C0123456789"  # #engineering channel
+```
+
+## Advanced: Keyword Detection
+
+Route different requests to different Sprites based on keywords:
+
+```yaml review-requests.yaml
+id: slack-review-only
+description: Only respond to review requests
+
+sprite:
+  name: code-reviewer
+
+source:
+  type: webhook
+  event: event_callback
+
+match:
+  - payload.event.type == "app_mention"
+
+run: |
+  {{#payload.event.text}}
+  Check if this message contains "review" or "PR".
+  If not, respond that you only handle code reviews.
+  {{/payload.event.text}}
+
+  Message: {{payload.event.text}}
+```
+
+---
+
+## Sprite Configuration
+
+Your Sprite should have:
+
+1. **Slack Bot Token**: For posting messages back
+2. **GitHub Token**: If handling code reviews
+3. **API keys**: For any services it needs to query
+
+Example Sprite setup in Claude:
+
+```bash
+# Environment variables your Sprite needs
+SLACK_BOT_TOKEN=xoxb-...
+GITHUB_TOKEN=ghp_...
+POSTHOG_API_KEY=phx_...
+```
+
+---
+
+## Testing
+
+Test your Slack integration:
+
+1. Mention your bot in a channel: `@SpriteBot hello!`
+2. Check SpriteSwarm logs for the incoming webhook
+3. Verify your Sprite received the command
+4. Check for the bot's response in Slack
+
+<Tip>
+Use Slack's [Event Subscriptions debug page](https://api.slack.com/apps) to see incoming events and verify your webhook URL is responding correctly.
+</Tip>

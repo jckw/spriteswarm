@@ -1,0 +1,194 @@
+---
+title: Error Triage
+description: 'Analyze Sentry errors and create issues with AI-suggested fixes'
+icon: 'bug'
+---
+
+When errors hit Sentry, your Sprite analyzes the stack trace, investigates the codebase, and creates a Linear (or Jira) issue with context and suggested fixes.
+
+## Basic Error Triage
+
+```yaml sentry-triage.yaml
+id: sentry-triage
+description: Analyze Sentry errors and create Linear issues
+
+sprite:
+  name: ops-agent
+  workdir: /home/user/repos
+
+source:
+  type: webhook
+  event: issue
+
+match:
+  - payload.action == "created"
+  - payload.data.issue.level == "error"
+
+run: |
+  A new error was reported to Sentry.
+
+  Error: {{payload.data.issue.title}}
+  Level: {{payload.data.issue.level}}
+  Culprit: {{payload.data.issue.culprit}}
+  First seen: {{payload.data.issue.firstSeen}}
+  Event count: {{payload.data.issue.count}}
+
+  1. Analyze the stack trace
+  2. Find the relevant code in the repository
+  3. Investigate potential causes
+  4. Create a Linear issue with:
+     - Clear title
+     - Error context and stack trace
+     - Affected code location
+     - Suggested fix or investigation steps
+     - Priority based on error frequency and impact
+```
+
+---
+
+## Sentry Webhook Setup
+
+### 1. Configure in Sentry
+
+1. Go to **Settings** → **Integrations** → **Webhooks**
+2. Add webhook URL: `https://your-app.fly.dev/webhook/sentry`
+3. Select events: **Issue Created**
+
+### 2. Filter by Project
+
+Add match conditions to filter by project:
+
+```yaml
+match:
+  - payload.action == "created"
+  - payload.data.issue.project.slug == "backend-api"
+```
+
+---
+
+## Priority-Based Routing
+
+Route critical errors differently:
+
+```yaml critical-errors.yaml
+id: critical-error-alert
+description: Immediate alert for critical errors
+
+sprite:
+  name: ops-agent
+
+source:
+  type: webhook
+  event: issue
+
+match:
+  - payload.action == "created"
+  - payload.data.issue.level == "fatal"
+
+run: |
+  🚨 CRITICAL ERROR detected!
+
+  Error: {{payload.data.issue.title}}
+
+  1. Immediately post to #incidents Slack channel
+  2. Check if this affects production
+  3. Identify potential impact scope
+  4. Page on-call if this is user-facing
+
+  This is high priority—respond quickly.
+```
+
+---
+
+## Error Analysis Workflow
+
+```yaml detailed-error-analysis.yaml
+id: detailed-error-analysis
+description: Deep analysis of new errors
+
+sprite:
+  name: ops-agent
+  workdir: /home/user/repos/backend
+
+source:
+  type: webhook
+  event: issue
+
+match:
+  - payload.action == "created"
+  - payload.data.issue.level == "error"
+
+run: |
+  New error needs investigation.
+
+  ## Error Details
+  - Title: {{payload.data.issue.title}}
+  - Culprit: {{payload.data.issue.culprit}}
+  - Event count: {{payload.data.issue.count}}
+
+  ## Investigation Steps
+
+  1. **Parse the stack trace**
+     - Identify the failing function
+     - Note the file and line number
+
+  2. **Check the code**
+     - Pull latest from main
+     - Read the relevant files
+     - Understand the context
+
+  3. **Analyze the cause**
+     - Is this a regression?
+     - Is it related to recent changes?
+     - What conditions trigger it?
+
+  4. **Create Linear issue**
+     Include:
+     - Error title and message
+     - Stack trace (formatted)
+     - Code context
+     - Hypothesis about the cause
+     - Suggested fix approach
+     - Priority (based on frequency/impact)
+
+  5. **Post to Slack**
+     Brief summary in #engineering
+```
+
+---
+
+## Sentry Payload Reference
+
+```json
+{
+  "action": "created",
+  "data": {
+    "issue": {
+      "id": "123456",
+      "title": "TypeError: Cannot read property 'id' of undefined",
+      "culprit": "app/services/user.ts in getUser",
+      "level": "error",
+      "status": "unresolved",
+      "count": 42,
+      "firstSeen": "2024-01-15T10:30:00Z",
+      "lastSeen": "2024-01-15T11:00:00Z",
+      "project": {
+        "id": "789",
+        "name": "Backend API",
+        "slug": "backend-api"
+      }
+    }
+  }
+}
+```
+
+### Template Variables
+
+| Variable | Description |
+|----------|-------------|
+| `{{payload.action}}` | `created`, `resolved`, etc. |
+| `{{payload.data.issue.title}}` | Error message |
+| `{{payload.data.issue.culprit}}` | Where it happened |
+| `{{payload.data.issue.level}}` | `error`, `warning`, `fatal` |
+| `{{payload.data.issue.count}}` | Number of occurrences |
+| `{{payload.data.issue.project.slug}}` | Project identifier |

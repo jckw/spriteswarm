@@ -1,0 +1,180 @@
+---
+title: Admin Endpoints
+description: 'Manage automations via the API'
+---
+
+All admin endpoints require the `X-Admin-Token` header.
+
+## List Automations
+
+```
+GET /admin/automations
+```
+
+Returns all automations.
+
+### Request
+
+```bash
+curl https://your-app.fly.dev/admin/automations \
+  -H "X-Admin-Token: your-token"
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "automations": [
+    {
+      "id": "pr-review",
+      "description": "AI code review",
+      "sprite": {"name": "code-reviewer"},
+      "source": {"type": "webhook", "event": "pull_request"}
+    }
+  ]
+}
+```
+
+## Get Automation
+
+```
+GET /admin/automations/:id
+```
+
+Returns a single automation by ID.
+
+### Request
+
+```bash
+curl https://your-app.fly.dev/admin/automations/pr-review \
+  -H "X-Admin-Token: your-token"
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "automation": {
+    "id": "pr-review",
+    "description": "AI code review on new PRs",
+    "sprite": {
+      "name": "code-reviewer",
+      "workdir": "/home/user/repos"
+    },
+    "source": {
+      "type": "webhook",
+      "event": "pull_request"
+    },
+    "match": [
+      "payload.action == \"opened\""
+    ],
+    "run": "Review this PR..."
+  }
+}
+```
+
+## Create/Update Automation
+
+```
+POST /admin/automations
+```
+
+Creates a new automation or updates an existing one (matched by `id`).
+
+### Request
+
+```bash
+curl -X POST https://your-app.fly.dev/admin/automations \
+  -H "X-Admin-Token: your-token" \
+  -H "Content-Type: text/yaml" \
+  --data-binary @automation.yaml
+```
+
+The request body should be a valid automation YAML:
+
+```yaml
+id: my-automation
+description: My automation
+
+sprite:
+  name: my-sprite
+
+source:
+  type: webhook
+  event: push
+
+run: Handle the push event
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "automation": {
+    "id": "my-automation",
+    ...
+  }
+}
+```
+
+## Delete Automation
+
+```
+DELETE /admin/automations/:id
+```
+
+Deletes an automation by ID.
+
+### Request
+
+```bash
+curl -X DELETE https://your-app.fly.dev/admin/automations/my-automation \
+  -H "X-Admin-Token: your-token"
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "deleted": "my-automation"
+}
+```
+
+## Error Responses
+
+### 401 Unauthorized
+
+Missing or invalid admin token:
+
+```json
+{
+  "success": false,
+  "error": "Unauthorized"
+}
+```
+
+### 404 Not Found
+
+Automation doesn't exist:
+
+```json
+{
+  "success": false,
+  "error": "Automation not found"
+}
+```
+
+### 400 Bad Request
+
+Invalid YAML or missing required fields:
+
+```json
+{
+  "success": false,
+  "error": "Invalid automation: missing required field 'id'"
+}
+```

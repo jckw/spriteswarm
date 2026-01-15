@@ -1,0 +1,141 @@
+---
+title: Fly.io Deployment
+description: 'Step-by-step Fly.io deployment guide'
+---
+
+## Prerequisites
+
+1. [Fly.io account](https://fly.io)
+2. Fly CLI installed: `curl -L https://fly.io/install.sh | sh`
+3. Cloudflare KV namespace created
+4. Sprites.dev API token
+
+## Step 1: Clone and Configure
+
+```bash
+git clone https://github.com/jckw/spriteswarm
+cd spriteswarm
+```
+
+## Step 2: Launch on Fly.io
+
+```bash
+fly auth login
+fly launch
+```
+
+When prompted:
+- Choose a unique app name
+- Select a region close to your users
+- Don't deploy yet (we need secrets first)
+
+## Step 3: Set Secrets
+
+```bash
+fly secrets set \
+  SPRITES_TOKEN="your-sprites-dev-token" \
+  ADMIN_TOKEN="$(openssl rand -hex 32)" \
+  GITHUB_WEBHOOK_SECRET="$(openssl rand -hex 32)" \
+  CF_ACCOUNT_ID="your-cloudflare-account-id" \
+  CF_API_TOKEN="your-cloudflare-api-token" \
+  CF_KV_NAMESPACE_ID="your-kv-namespace-id"
+```
+
+## Step 4: Deploy
+
+```bash
+fly deploy
+```
+
+## Step 5: Verify
+
+```bash
+# Check health
+curl https://your-app.fly.dev/health
+
+# List automations (should be empty)
+curl https://your-app.fly.dev/admin/automations \
+  -H "X-Admin-Token: your-admin-token"
+```
+
+## fly.toml Configuration
+
+The included `fly.toml` works out of the box:
+
+```toml
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false  # Keep running for webhooks
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
+```
+
+<Note>
+`auto_stop_machines = false` ensures the server stays running to receive webhooks and run cron jobs.
+</Note>
+
+## Scaling
+
+For higher traffic:
+
+```bash
+# Add more machines
+fly scale count 2
+
+# Increase memory
+fly scale memory 512
+```
+
+## Logs
+
+```bash
+# Stream logs
+fly logs
+
+# View recent logs
+fly logs --no-tail
+```
+
+## Updates
+
+To deploy updates:
+
+```bash
+git pull
+fly deploy
+```
+
+## Troubleshooting
+
+### App won't start
+
+Check secrets are set:
+```bash
+fly secrets list
+```
+
+### Webhooks not received
+
+Verify your app URL is correct and the health endpoint responds:
+```bash
+curl https://your-app.fly.dev/health
+```
+
+### KV errors
+
+Ensure Cloudflare credentials are correct:
+- `CF_ACCOUNT_ID`: Your Cloudflare account ID
+- `CF_API_TOKEN`: API token with KV read/write permissions
+- `CF_KV_NAMESPACE_ID`: The namespace ID from `wrangler kv:namespace create`

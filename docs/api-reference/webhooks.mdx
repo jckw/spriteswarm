@@ -1,0 +1,112 @@
+---
+title: Webhook Endpoints
+description: 'Receive events from external services'
+---
+
+## Endpoint
+
+```
+POST /webhook/:source
+```
+
+Receives webhook events from external services and triggers matching automations.
+
+## Supported Sources
+
+| Source | URL | Validation |
+|--------|-----|------------|
+| GitHub | `/webhook/github` | HMAC-SHA256 signature |
+| Slack | `/webhook/slack` | Request signing |
+| Stripe | `/webhook/stripe` | Webhook signature |
+| Sentry | `/webhook/sentry` | Shared secret |
+| Custom | `/webhook/custom` | None (use cautiously) |
+
+## GitHub Webhooks
+
+### Request
+
+```
+POST /webhook/github
+Content-Type: application/json
+X-GitHub-Event: pull_request
+X-Hub-Signature-256: sha256=xxxxx
+```
+
+### Validation
+
+SpriteSwarm validates the `X-Hub-Signature-256` header using your `GITHUB_WEBHOOK_SECRET`.
+
+### Response
+
+```json
+{
+  "success": true,
+  "matched": 2,
+  "executed": [
+    {"id": "pr-review", "sprite": "code-reviewer"},
+    {"id": "pr-notify", "sprite": "notifier"}
+  ]
+}
+```
+
+## Slack Webhooks
+
+### Request
+
+```
+POST /webhook/slack
+Content-Type: application/json
+X-Slack-Request-Timestamp: 1234567890
+X-Slack-Signature: v0=xxxxx
+```
+
+### URL Verification
+
+Slack sends a URL verification challenge on setup:
+
+```json
+{
+  "type": "url_verification",
+  "challenge": "xxxxx"
+}
+```
+
+SpriteSwarm responds with the challenge value automatically.
+
+## Stripe Webhooks
+
+### Request
+
+```
+POST /webhook/stripe
+Content-Type: application/json
+Stripe-Signature: t=xxx,v1=xxx
+```
+
+### Validation
+
+Validates using `STRIPE_WEBHOOK_SECRET`.
+
+## Custom Webhooks
+
+For unsupported services, use `/webhook/custom`:
+
+```bash
+curl -X POST https://your-app.fly.dev/webhook/custom \
+  -H "Content-Type: application/json" \
+  -H "X-Event-Type: my-event" \
+  -d '{"key": "value"}'
+```
+
+<Warning>
+Custom webhooks have no validation. Consider adding authentication in your automation's match conditions.
+</Warning>
+
+## Response Codes
+
+| Code | Meaning |
+|------|---------|
+| 200 | Success (automations executed) |
+| 400 | Invalid request body |
+| 401 | Invalid signature/authentication |
+| 500 | Internal error |

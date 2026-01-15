@@ -1,0 +1,96 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "SpriteSwarm",
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#6366F1",
+    "light": "#818CF8",
+    "dark": "#4F46E5",
+    "anchors": {
+      "from": "#6366F1",
+      "to": "#8B5CF6"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "GitHub",
+      "url": "https://github.com/jckw/spriteswarm"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Get Started",
+    "url": "https://sprites.dev"
+  },
+  "tabs": [
+    {
+      "name": "Examples",
+      "url": "examples"
+    },
+    {
+      "name": "API Reference",
+      "url": "api-reference"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "Sprites.dev",
+      "icon": "robot",
+      "url": "https://sprites.dev"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "concepts"
+      ]
+    },
+    {
+      "group": "Writing Automations",
+      "pages": [
+        "automations/overview",
+        "automations/webhooks",
+        "automations/cron",
+        "automations/matching",
+        "automations/templates"
+      ]
+    },
+    {
+      "group": "Use Cases",
+      "pages": [
+        "examples/overview",
+        "examples/slack-trigger",
+        "examples/github-pr-review",
+        "examples/analytics-insights",
+        "examples/error-triage",
+        "examples/customer-churn"
+      ]
+    },
+    {
+      "group": "Deployment",
+      "pages": [
+        "deployment/overview",
+        "deployment/fly-io",
+        "deployment/environment"
+      ]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api-reference/overview",
+        "api-reference/webhooks",
+        "api-reference/admin"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/jckw/spriteswarm",
+    "x": "https://x.com/jackw_xyz"
+  }
+}

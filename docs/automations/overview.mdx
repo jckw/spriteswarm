@@ -1,0 +1,118 @@
+---
+title: Writing Automations
+description: 'Complete reference for SpriteSwarm automation files'
+---
+
+Automations are YAML files that define rules for when and how to trigger your Sprites. Each automation connects an event source to a command.
+
+## Automation Structure
+
+```yaml
+id: unique-identifier
+description: What this automation does
+
+sprite:
+  name: sprite-name
+  workdir: /optional/working/directory
+
+source:
+  type: webhook  # or cron
+  event: event.type
+  schedule: "0 9 * * *"  # for cron only
+
+match:
+  - payload.field == "value"
+
+run: |
+  The command to execute with {{template.variables}}
+```
+
+## Required Fields
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique identifier for this automation |
+| `sprite.name` | Name of the Sprite to execute on |
+| `source.type` | Either `webhook` or `cron` |
+| `run` | The command template to execute |
+
+## Optional Fields
+
+| Field | Description |
+|-------|-------------|
+| `description` | Human-readable description |
+| `sprite.workdir` | Working directory for the command |
+| `source.event` | Event type to match (webhooks) |
+| `source.schedule` | Cron expression (cron only) |
+| `match` | Array of conditions to filter events |
+
+## The `run` Field
+
+The `run` field contains the command sent to your Sprite. It supports:
+
+- **Multi-line commands**: Use `|` for block scalar
+- **Template variables**: `{{payload.x.y}}`
+- **Natural language**: Sprites running Claude understand context
+
+```yaml
+run: |
+  Review this pull request and provide feedback.
+
+  Repository: {{payload.repository.full_name}}
+  PR Number: {{payload.pull_request.number}}
+  Title: {{payload.pull_request.title}}
+
+  Focus on:
+  - Code quality
+  - Security issues
+  - Test coverage
+```
+
+## Managing Automations
+
+### Upload or Update
+
+```bash
+curl -X POST https://your-app.fly.dev/admin/automations \
+  -H "X-Admin-Token: your-token" \
+  -H "Content-Type: text/yaml" \
+  --data-binary @automation.yaml
+```
+
+### List All
+
+```bash
+curl https://your-app.fly.dev/admin/automations \
+  -H "X-Admin-Token: your-token"
+```
+
+### Get One
+
+```bash
+curl https://your-app.fly.dev/admin/automations/my-automation-id \
+  -H "X-Admin-Token: your-token"
+```
+
+### Delete
+
+```bash
+curl -X DELETE https://your-app.fly.dev/admin/automations/my-automation-id \
+  -H "X-Admin-Token: your-token"
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Webhooks" icon="webhook" href="/automations/webhooks">
+    Configure webhook-triggered automations
+  </Card>
+  <Card title="Cron Jobs" icon="clock" href="/automations/cron">
+    Set up scheduled automations
+  </Card>
+  <Card title="Matching" icon="filter" href="/automations/matching">
+    Filter events with match conditions
+  </Card>
+  <Card title="Templates" icon="code" href="/automations/templates">
+    Use template variables in commands
+  </Card>
+</CardGroup>

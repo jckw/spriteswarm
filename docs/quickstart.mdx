@@ -1,0 +1,133 @@
+---
+title: Quickstart
+description: 'Get SpriteSwarm running in 5 minutes'
+---
+
+## Prerequisites
+
+Before you begin, you'll need:
+
+- A [Sprites.dev](https://sprites.dev) account with at least one Sprite created
+- A [Cloudflare](https://cloudflare.com) account (for KV storage)
+- A [Fly.io](https://fly.io) account (for deployment)
+
+## Step 1: Clone and Configure
+
+```bash
+git clone https://github.com/jckw/spriteswarm
+cd spriteswarm
+```
+
+Create your environment file:
+
+```bash
+cp .env.example .env
+```
+
+## Step 2: Set Up Cloudflare KV
+
+SpriteSwarm stores automations in Cloudflare KV.
+
+```bash
+# Install Wrangler CLI
+npm install -g wrangler
+
+# Login to Cloudflare
+wrangler login
+
+# Create a KV namespace
+wrangler kv:namespace create "spriteswarm"
+```
+
+Copy the namespace ID and add it to your `.env`:
+
+```env
+CF_ACCOUNT_ID=your-account-id
+CF_API_TOKEN=your-api-token
+CF_KV_NAMESPACE_ID=your-namespace-id
+```
+
+## Step 3: Configure Secrets
+
+Add your remaining environment variables:
+
+```env
+PORT=8080
+SPRITES_TOKEN=your-sprites-dev-token
+ADMIN_TOKEN=a-secure-random-string
+GITHUB_WEBHOOK_SECRET=your-github-webhook-secret
+```
+
+<Tip>
+Generate secure tokens with: `openssl rand -hex 32`
+</Tip>
+
+## Step 4: Deploy to Fly.io
+
+```bash
+# Install Fly CLI
+curl -L https://fly.io/install.sh | sh
+
+# Login and launch
+fly auth login
+fly launch
+
+# Set secrets
+fly secrets set SPRITES_TOKEN=xxx ADMIN_TOKEN=xxx ...
+```
+
+## Step 5: Upload Your First Automation
+
+Create a simple automation file:
+
+```yaml automation.yaml
+id: hello-world
+description: Test automation that runs on demand
+
+sprite:
+  name: my-sprite
+
+source:
+  type: webhook
+  event: test
+
+run: echo "Hello from SpriteSwarm!"
+```
+
+Upload it:
+
+```bash
+curl -X POST https://your-app.fly.dev/admin/automations \
+  -H "X-Admin-Token: your-admin-token" \
+  -H "Content-Type: text/yaml" \
+  --data-binary @automation.yaml
+```
+
+## Step 6: Test It
+
+Trigger your automation:
+
+```bash
+curl -X POST https://your-app.fly.dev/webhook/test \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello!"}'
+```
+
+Check your Sprite's logs to see the command executed.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Core Concepts" icon="book" href="/concepts">
+    Understand automations, sprites, and matching
+  </Card>
+  <Card title="Slack Integration" icon="slack" href="/examples/slack-trigger">
+    Set up Slack-triggered automations
+  </Card>
+  <Card title="GitHub PR Review" icon="github" href="/examples/github-pr-review">
+    Automate AI code reviews
+  </Card>
+  <Card title="Analytics Insights" icon="chart-line" href="/examples/analytics-insights">
+    Daily AI-powered analytics reports
+  </Card>
+</CardGroup>
