@@ -42,11 +42,14 @@ Set `GITHUB_WEBHOOK_SECRET` for signature validation.
 
 ```yaml
 source:
-  type: webhook
-  event: event_callback
+  type: slack
+  events:
+    - app_mention
 ```
 
-Events: `app_mention`, `message`, `reaction_added`, etc.
+Events: `app_mention`, `message`, `reaction_added`, `message.channels`, `message.im`, etc.
+
+Set `SLACK_WEBHOOK_SECRET` for signature validation (use your Slack app's Signing Secret).
 
 ### Stripe
 

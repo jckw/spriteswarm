@@ -41,6 +41,15 @@ Go to **OAuth & Permissions** and add these scopes:
 
 Click **Install to Workspace** and authorize.
 
+### 5. Configure SpriteSwarm
+
+Set the `SLACK_WEBHOOK_SECRET` environment variable to your app's **Signing Secret** (found under Basic Information → App Credentials).
+
+```bash
+# Add to your .env or Fly.io secrets
+SLACK_WEBHOOK_SECRET=your-signing-secret-here
+```
+
 ---
 
 ## Example: General Assistant
@@ -56,11 +65,9 @@ sprite:
   workdir: /home/user/workspace
 
 source:
-  type: webhook
-  event: event_callback
-
-match:
-  - payload.event.type == "app_mention"
+  type: slack
+  events:
+    - app_mention
 
 run: |
   You received a message in Slack. Respond helpfully.
@@ -93,11 +100,9 @@ sprite:
   workdir: /home/user/repos
 
 source:
-  type: webhook
-  event: event_callback
-
-match:
-  - payload.event.type == "app_mention"
+  type: slack
+  events:
+    - app_mention
 
 run: |
   Someone requested a code review in Slack.
@@ -129,11 +134,9 @@ sprite:
   workdir: /home/user/workspace
 
 source:
-  type: webhook
-  event: event_callback
-
-match:
-  - payload.event.type == "app_mention"
+  type: slack
+  events:
+    - app_mention
 
 run: |
   A team member requested a report via Slack.
@@ -190,8 +193,12 @@ When Slack sends an event, the payload looks like this:
 Only respond in specific channels:
 
 ```yaml
+source:
+  type: slack
+  events:
+    - app_mention
+
 match:
-  - payload.event.type == "app_mention"
   - payload.event.channel == "C0123456789"  # #engineering channel
 ```
 
@@ -207,11 +214,9 @@ sprite:
   name: code-reviewer
 
 source:
-  type: webhook
-  event: event_callback
-
-match:
-  - payload.event.type == "app_mention"
+  type: slack
+  events:
+    - app_mention
 
 run: |
   {{#payload.event.text}}

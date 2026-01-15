@@ -5,12 +5,14 @@ import { logger } from 'hono/logger';
 import { admin } from './routes/admin.js';
 import { createWebhookRoutes } from './routes/webhook.js';
 import { githubAdapter } from './adapters/github.js';
+import { slackAdapter } from './adapters/slack.js';
 import type { SourceAdapter, AdapterRegistry } from './adapters/types.js';
 import { initCronScheduler, syncCronJobs } from './cron/scheduler.js';
 
 // Initialize adapter registry
 const adapters: AdapterRegistry = new Map<string, SourceAdapter>();
 adapters.set('github', githubAdapter);
+adapters.set('slack', slackAdapter);
 
 const app = new Hono();
 

@@ -20,7 +20,7 @@ description: 'Complete list of configuration options'
 | `PORT` | `8080` | Server port |
 | `GITHUB_WEBHOOK_SECRET` | - | GitHub webhook HMAC secret |
 | `STRIPE_WEBHOOK_SECRET` | - | Stripe webhook signing secret |
-| `SLACK_SIGNING_SECRET` | - | Slack request signing secret |
+| `SLACK_WEBHOOK_SECRET` | - | Slack request signing secret |
 
 ## Getting Credentials
 
@@ -70,6 +70,15 @@ openssl rand -hex 32
 
 Keep this secret—it provides full access to manage automations.
 
+### Slack Signing Secret
+
+1. Go to [api.slack.com/apps](https://api.slack.com/apps) and select your app
+2. Navigate to **Basic Information**
+3. Under **App Credentials**, find the **Signing Secret**
+4. Copy and use this as your `SLACK_WEBHOOK_SECRET`
+
+This is used to verify that incoming webhooks are from Slack.
+
 ## Example .env File
 
 ```env
@@ -90,7 +99,7 @@ CF_KV_NAMESPACE_ID=xxxxxxxxxxxxxxxx
 # Webhook Secrets (optional, but recommended)
 GITHUB_WEBHOOK_SECRET=xxxxxxxxxxxxxxxx
 STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxx
-SLACK_SIGNING_SECRET=xxxxxxxxxxxxxxxx
+SLACK_WEBHOOK_SECRET=xxxxxxxxxxxxxxxx
 ```
 
 ## Security Notes

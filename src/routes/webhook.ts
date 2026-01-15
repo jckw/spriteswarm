@@ -5,6 +5,10 @@ import { isWebhookSource } from '../types.js';
 import { loadAllAutomations } from '../storage/kv.js';
 import { evaluateMatches } from '../engine/matcher.js';
 import { executeAll } from '../engine/executor.js';
+import {
+  isUrlVerification,
+  getSlackEventType,
+} from '../adapters/slack.js';
 
 /**
  * Create webhook routes with the given adapter registry
@@ -41,12 +45,21 @@ export function createWebhookRoutes(adapters: AdapterRegistry): Hono {
       return c.json({ error: 'Invalid signature' }, 401);
     }
 
-    // Get event type
-    const eventType = adapter.getEventType(c.req.raw);
-    console.log(`Received ${sourceName}/${eventType} webhook`);
-
-    // Parse payload
+    // Parse payload first (needed for Slack event type extraction)
     const payload = await adapter.parsePayload(c.req.raw) as Record<string, unknown>;
+
+    // Handle Slack URL verification challenge
+    if (sourceName === 'slack' && isUrlVerification(payload)) {
+      console.log('Responding to Slack URL verification challenge');
+      return c.json({ challenge: payload.challenge });
+    }
+
+    // Get event type - for Slack, extract from payload; for others, use header
+    const eventType =
+      sourceName === 'slack'
+        ? getSlackEventType(payload)
+        : adapter.getEventType(c.req.raw);
+    console.log(`Received ${sourceName}/${eventType} webhook`);
 
     // Load all automations
     let automations: Automation[];

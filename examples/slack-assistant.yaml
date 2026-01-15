@@ -1,0 +1,26 @@
+# AI assistant triggered by @mentioning the bot in Slack
+id: slack-assistant
+
+description: |
+  Responds to @mentions of your Slack bot. When someone mentions
+  the bot, it reads the message and responds helpfully.
+
+sprite:
+  name: slack-agent
+  workdir: /home/user/workspace
+
+source:
+  type: slack
+  events:
+    - app_mention
+
+run: |
+  You received a message in Slack. Respond helpfully.
+
+  Channel: {{payload.event.channel}}
+  User: {{payload.event.user}}
+  Message: {{payload.event.text}}
+  Thread: {{payload.event.thread_ts}}
+
+  Use the Slack API to post your response back to the channel.
+  If this is in a thread, reply in the thread using thread_ts.
