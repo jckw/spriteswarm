@@ -1,0 +1,35 @@
+# AI checks analytics and posts daily insights
+id: daily-metrics
+
+description: |
+  Every morning, Claude checks PostHog, analyzes trends,
+  and posts actionable insights to Slack.
+
+sprite:
+  name: analytics-agent
+  workdir: /home/user
+
+source:
+  type: cron
+  schedule: "0 9 * * 1-5"  # 9am weekdays
+
+run: |
+  claude -p "
+  Good morning! Time for the daily metrics check.
+
+  1. Query PostHog API for the last 24 hours:
+     - Daily active users
+     - Signup → activation → paid conversion rates
+     - Top 5 events by volume
+     - Any events with >20% drop vs last week
+
+  2. Analyze what you find:
+     - What's the most important thing the team should know?
+     - Any anomalies or concerns?
+     - One specific, actionable recommendation
+
+  3. Post a concise summary to #metrics in Slack
+     - Lead with the key insight, not raw numbers
+     - Keep it under 200 words
+     - Use :warning: only if something needs immediate attention
+  "

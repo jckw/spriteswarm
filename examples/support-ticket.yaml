@@ -1,0 +1,43 @@
+# AI drafts responses to support tickets
+id: support-ticket
+
+description: |
+  When a new Intercom conversation starts, Claude researches
+  the customer and drafts a helpful first response.
+
+sprite:
+  name: support-agent
+  workdir: /home/user
+
+source:
+  type: intercom
+  events:
+    - conversation.user.created
+
+run: |
+  claude -p "
+  New support conversation from a customer:
+
+  Customer email: {{payload.data.item.user.email}}
+  Message: {{payload.data.item.conversation_message.body}}
+
+  1. Look up this customer:
+     - Check our database for their account details
+     - Check Stripe for their plan and billing status
+     - Check PostHog for their recent activity
+
+  2. Understand their question and research the answer:
+     - Search our docs if it's a how-to question
+     - Check for known issues if it's a bug report
+     - Look at their specific setup if it's account-related
+
+  3. Draft a response that:
+     - Addresses them by name
+     - Shows you understand their specific situation
+     - Provides a clear, helpful answer
+     - Offers next steps
+
+  4. Save the draft for human review (don't send automatically)
+     - Create file: drafts/support-{{payload.data.item.id}}.md
+     - Post to #support-drafts in Slack with a link
+  "

@@ -1,0 +1,35 @@
+# AI generates weekly project summary
+id: weekly-report
+
+description: |
+  Every Friday, Claude reviews the week's GitHub activity
+  and writes a summary for stakeholders.
+
+sprite:
+  name: reporting-agent
+  workdir: /home/user/project
+
+source:
+  type: cron
+  schedule: "0 16 * * 5"  # 4pm Friday
+
+run: |
+  cd {{sprite.workdir}} && \
+  claude -p "
+  It's Friday - time to write the weekly engineering summary.
+
+  1. Use the GitHub API to gather this week's activity:
+     - PRs merged (with brief descriptions)
+     - Issues closed
+     - New issues opened
+     - Any incidents or hotfixes
+
+  2. Write a summary for non-technical stakeholders:
+     - What shipped this week (in plain English)
+     - What's in progress
+     - Any blockers or risks
+     - What's planned for next week
+
+  3. Post to #engineering-updates in Slack
+  4. Also save to reports/week-$(date +%Y-%m-%d).md
+  "

@@ -1,0 +1,36 @@
+# AI triages Sentry errors and creates Linear issues
+id: sentry-triage
+
+description: |
+  When a new Sentry error arrives, Claude analyzes the stack trace,
+  determines severity, and creates a properly categorized Linear issue.
+
+sprite:
+  name: ops-agent
+  workdir: /home/user
+
+source:
+  type: sentry
+  events:
+    - issue.created
+
+match:
+  - payload.data.issue.level == "error"
+
+run: |
+  claude -p "
+  A new Sentry error just came in:
+
+  Title: {{payload.data.issue.title}}
+  Culprit: {{payload.data.issue.culprit}}
+  URL: {{payload.data.issue.permalink}}
+  Event count: {{payload.data.issue.count}}
+
+  1. Fetch the full error details from Sentry using their API
+  2. Analyze the stack trace and determine:
+     - Root cause
+     - Severity (critical/high/medium/low)
+     - Affected component
+  3. Create a Linear issue with your analysis using their API
+  4. If critical, also post to #incidents in Slack
+  "

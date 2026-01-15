@@ -1,0 +1,39 @@
+# AI investigates churn signals and drafts outreach
+id: customer-churn-alert
+
+description: |
+  When Stripe sends a subscription cancellation webhook,
+  Claude investigates the customer's usage and drafts a personalized
+  win-back email for the team to review.
+
+sprite:
+  name: customer-success-agent
+  workdir: /home/user
+
+source:
+  type: stripe
+  events:
+    - customer.subscription.deleted
+
+run: |
+  claude -p "
+  A customer just cancelled their subscription:
+
+  Customer ID: {{payload.data.object.customer}}
+  Plan: {{payload.data.object.plan.nickname}}
+  Cancelled at: {{payload.data.object.canceled_at}}
+
+  Please investigate and help us potentially win them back:
+
+  1. Look up this customer in our database
+  2. Check their recent activity in PostHog:
+     - When did they last use the product?
+     - What features did they use most?
+     - Any error events in their last session?
+  3. Check Intercom for any recent support conversations
+  4. Based on what you find, draft a personalized email:
+     - Acknowledge their specific use case
+     - Address likely pain points you discovered
+     - Offer something concrete (call, discount, feature they might not know about)
+  5. Save the draft to drafts/winback-{{payload.data.object.customer}}.md
+  "
