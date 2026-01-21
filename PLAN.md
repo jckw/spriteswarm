@@ -1,10 +1,12 @@
-# Sprite Orchestrator - Technical Spec
+# Spriteswarm - Technical Spec
 
 ## Overview
 
-A long-running Node.js server (Fly.io) that receives webhooks and cron triggers, evaluates declarative automation rules, and dispatches shell commands to Sprites via the Sprites.dev API.
+A long-running Node.js server (Fly.io) that receives webhooks and cron triggers, evaluates declarative automation rules, and dispatches prompts to AI agents running on Sprites via the Sprites.dev API.
 
-**Key difference from PRD**: More generic than originally scoped. Not GitHub-specific—supports pluggable webhook sources with source-specific payloads and JSONPath-based matching/templating.
+**Key differences from original PRD**:
+- More generic than originally scoped—supports pluggable webhook sources (GitHub, Slack, AgentMail, generic)
+- Execution model changed from shell commands to stdin-based prompts sent to executables (e.g., Claude)
 
 ---
 
@@ -98,8 +100,10 @@ description: Triggers code review when PR is opened
 
 # Which sprite to execute on
 sprite:
-  name: my-sprite-name      # Sprite name (same as ID in API)
-  workdir: /home/user/repo  # Optional working directory
+  name: code-reviewer       # Sprite name (same as ID in API)
+  path: claude              # Executable to run
+  cmd: "-p"                 # Command-line arguments (optional)
+  workdir: /home/user/repo  # Working directory (optional)
 
 # Event source configuration
 source:
@@ -115,13 +119,17 @@ match:
   - payload.repository.full_name == "myorg/myrepo"
   - payload.pull_request.draft == false
 
-# Shell command to execute
+# Prompt to send via stdin to the executable
 # Supports {{payload.x.y.z}} template variables
 run: |
-  cd {{sprite.workdir}} && \
-  git fetch origin pull/{{payload.pull_request.number}}/head:pr-{{payload.pull_request.number}} && \
-  git checkout pr-{{payload.pull_request.number}} && \
-  ./scripts/review.sh
+  Review this PR and post your feedback to GitHub.
+
+  PR #{{payload.pull_request.number}}: {{payload.pull_request.title}}
+  Author: {{payload.pull_request.user.login}}
+
+  1. Run 'git diff main' to see the changes
+  2. Review for bugs, security issues, and code quality
+  3. Post a review using the GitHub CLI
 ```
 
 ### Schema Details
@@ -132,10 +140,12 @@ run: |
 
 **`sprite`** (required)
 - `name`: Sprite name for API calls
-- `workdir`: Optional, available as `{{sprite.workdir}}` in templates
+- `path`: Executable to run on the sprite (e.g., `claude`)
+- `cmd`: Optional command-line arguments (e.g., `-p` for print mode)
+- `workdir`: Optional working directory on the sprite
 
 **`source`** (required)
-- `type`: Adapter name (`github`, future: `gitlab`, `slack`, etc.)
+- `type`: Adapter name (`github`, `slack`, `agentmail`, `generic`, `cron`)
 - `events`: Array of event types to trigger on
 
 **`match`** (optional)
@@ -145,7 +155,7 @@ run: |
 - Empty match = always matches
 
 **`run`** (required)
-- Shell command string
+- Prompt string sent via stdin to the executable
 - Template variables: `{{payload.x.y}}`, `{{sprite.workdir}}`
 
 ---
@@ -153,25 +163,27 @@ run: |
 ## Cron Automations
 
 ```yaml
-id: daily-cleanup
+id: daily-metrics
 
 sprite:
-  name: maintenance-sprite
+  name: analytics-agent
+  path: claude
+  cmd: "-p"
   workdir: /home/user
 
 source:
   type: cron
-  schedule: "0 2 * * *"  # 2am daily
+  schedule: "0 9 * * 1-5"  # 9am weekdays
 
 # No match rules for cron (no payload)
-# No templating (no context)
 
 run: |
-  cd {{sprite.workdir}} && ./cleanup.sh
+  Good morning! Time for the daily metrics check.
+  Query the analytics API and post a summary to Slack.
 ```
 
 - Cron automations have no payload, so no `match` rules or `{{payload.*}}` templates
-- Only `{{sprite.workdir}}` available
+- Only `{{sprite.workdir}}` available for templating
 - Schedule uses standard cron syntax
 - Executed via node-cron (in-memory scheduler, dynamically registered on startup and when automations change)
 
@@ -197,15 +209,29 @@ interface SourceAdapter {
 }
 ```
 
-### GitHub Adapter (v1)
+### GitHub Adapter
 
 - **Validation**: HMAC-SHA256 via `X-Hub-Signature-256` header
 - **Event type**: `X-GitHub-Event` header
-- **Supported events** (initial):
-  - `issue_comment`
-  - `pull_request`
-  - `pull_request_review`
-  - `push`
+- **Supported events**: `issue_comment`, `pull_request`, `pull_request_review`, `push`
+
+### Slack Adapter
+
+- **Validation**: Slack signing secret via `X-Slack-Signature` header
+- **Event type**: Extracted from payload (`event.type`)
+- **Handles**: URL verification challenges automatically
+
+### AgentMail Adapter
+
+- **Validation**: HMAC-SHA256 via `X-Agentmail-Signature` header
+- **Event type**: `event_type` field in payload
+- **Supported events**: `message.received`, `message.sent`, `message.delivered`, `message.bounced`
+
+### Generic Adapter
+
+- **Validation**: Direct comparison via `X-Webhook-Secret` header
+- **Event type**: `X-Event-Type` header (defaults to `message`)
+- **Use case**: Simple custom integrations
 
 ---
 
@@ -213,21 +239,27 @@ interface SourceAdapter {
 
 When an automation matches:
 
-1. Render the `run` command by substituting template variables
-2. Call Sprites API: `POST /v1/sprites/{name}/exec?cmd={encodedCommand}`
-3. If `workdir` specified, prepend `cd {workdir} && ` to command
-4. Fire-and-forget (don't wait for command completion)
+1. Render the `run` prompt by substituting template variables
+2. Build Sprites API URL with query parameters for `path`, `cmd`, `dir`, and `stdin=true`
+3. POST the rendered prompt as the request body
+4. Fire-and-forget (don't wait for completion)
 5. Log success/failure
 
 ### Sprites API Call
 
 ```
-POST https://api.sprites.dev/v1/sprites/{sprite.name}/exec?cmd={urlEncode(command)}
+POST https://api.sprites.dev/v1/sprites/{sprite.name}/exec?path={path}&cmd={cmd}&dir={workdir}&stdin=true
 Authorization: Bearer {SPRITES_TOKEN}
+Content-Type: text/plain; charset=utf-8
+
+{rendered prompt}
 ```
 
-- Returns immediately after command starts
-- No stdout/stderr capture
+- `path`: Executable to run (e.g., `claude`)
+- `cmd`: Command-line arguments (e.g., `-p`)
+- `dir`: Working directory on the sprite
+- `stdin=true`: Enables sending the prompt via request body
+- Returns immediately after process starts
 - Failures logged to console
 
 ---
@@ -272,8 +304,11 @@ payload.sender.login == "dependabot[bot]"
 | Variable | Description |
 |----------|-------------|
 | `SPRITES_TOKEN` | Bearer token for Sprites.dev API |
-| `GITHUB_WEBHOOK_SECRET` | HMAC secret for GitHub webhook validation |
 | `ADMIN_TOKEN` | Shared secret for admin endpoints |
+| `GITHUB_WEBHOOK_SECRET` | HMAC secret for GitHub webhook validation |
+| `SLACK_WEBHOOK_SECRET` | Slack signing secret for webhook validation |
+| `AGENTMAIL_WEBHOOK_SECRET` | Secret for AgentMail webhook validation |
+| `GENERIC_WEBHOOK_SECRET` | Secret for generic webhook validation |
 | `CF_ACCOUNT_ID` | Cloudflare account ID for KV API |
 | `CF_API_TOKEN` | Cloudflare API token with KV access |
 | `CF_KV_NAMESPACE_ID` | KV namespace ID for automations storage |
@@ -316,10 +351,11 @@ GET/PUT/DELETE https://api.cloudflare.com/client/v4/accounts/{account_id}/storag
 
 | Question | Decision |
 |----------|----------|
-| Exec method | POST (fire-and-forget) |
+| Exec method | POST with stdin (fire-and-forget) |
+| Prompt delivery | Via request body with `stdin=true` query param |
 | Idempotency | Skip for demo |
 | Automation storage | KV with upload endpoint |
-| Sprites config | Embedded in each automation |
+| Sprites config | Embedded in each automation (`path`, `cmd`, `workdir`) |
 | Webhook routing | Path-based (`/webhook/:source`) |
 | Event schema | Source-specific (no normalization) |
 | Templating | JSONPath-like for payload fields |
@@ -346,16 +382,21 @@ GET/PUT/DELETE https://api.cloudflare.com/client/v4/accounts/{account_id}/storag
 │   │   └── admin.ts          # Admin endpoints
 │   ├── adapters/
 │   │   ├── types.ts          # SourceAdapter interface
-│   │   └── github.ts         # GitHub adapter
+│   │   ├── github.ts         # GitHub adapter
+│   │   ├── slack.ts          # Slack adapter
+│   │   ├── agentmail.ts      # AgentMail adapter
+│   │   └── generic.ts        # Generic webhook adapter
 │   ├── engine/
 │   │   ├── matcher.ts        # Match expression evaluator
 │   │   ├── template.ts       # Template variable substitution
-│   │   └── executor.ts       # Sprites API client
+│   │   └── executor.ts       # Sprites API client (stdin-based)
 │   ├── cron/
 │   │   └── scheduler.ts      # node-cron scheduler management
 │   ├── storage/
 │   │   └── kv.ts             # Cloudflare KV REST API client
 │   └── types.ts              # Automation schema types
+├── examples/                 # Example automation YAML files
+├── .github/workflows/        # CI/CD (Fly.io deployment)
 ├── Dockerfile                # Fly.io deployment
 ├── fly.toml                  # Fly.io config
 ├── package.json

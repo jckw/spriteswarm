@@ -1,6 +1,6 @@
-# Sprite Orchestrator
+# Spriteswarm
 
-A Node.js server that receives webhooks and cron triggers, evaluates declarative automation rules, and dispatches shell commands to Sprites via the Sprites.dev API.
+A Node.js server that receives webhooks and cron triggers, evaluates declarative automation rules, and dispatches prompts to AI agents running on Sprites via the Sprites.dev API.
 
 ## Quick Start
 
@@ -67,7 +67,14 @@ GET /health
 POST /webhook/:source
 ```
 
-Receives webhooks from external sources. The `:source` parameter specifies the adapter (e.g., `github`).
+Receives webhooks from external sources. The `:source` parameter specifies the adapter.
+
+| Adapter | URL | Secret Header | Event Type |
+|---------|-----|---------------|------------|
+| `github` | `/webhook/github` | `X-Hub-Signature-256` (HMAC) | `X-GitHub-Event` header |
+| `slack` | `/webhook/slack` | Slack signing secret | Event from payload |
+| `agentmail` | `/webhook/agentmail` | `X-Agentmail-Signature` | `event_type` in payload |
+| `generic` | `/webhook/generic` | `X-Webhook-Secret` | `X-Event-Type` header (default: `message`) |
 
 ### Admin
 
@@ -87,7 +94,9 @@ id: pr-review-bot
 description: Triggers code review when PR is opened
 
 sprite:
-  name: my-sprite-name
+  name: code-reviewer
+  path: claude
+  cmd: "-p"
   workdir: /home/user/repo
 
 source:
@@ -101,10 +110,14 @@ match:
   - payload.pull_request.draft == false
 
 run: |
-  cd {{sprite.workdir}} && \
-  git fetch origin pull/{{payload.pull_request.number}}/head:pr-{{payload.pull_request.number}} && \
-  git checkout pr-{{payload.pull_request.number}} && \
-  ./scripts/review.sh
+  Review this PR and post your feedback to GitHub.
+
+  PR #{{payload.pull_request.number}}: {{payload.pull_request.title}}
+  Author: {{payload.pull_request.user.login}}
+
+  1. Run 'git diff main' to see the changes
+  2. Review for bugs, security issues, and code quality
+  3. Post a review with specific line comments using the GitHub CLI
 ```
 
 ### Fields
@@ -114,28 +127,36 @@ run: |
 | `id` | Yes | Unique identifier for the automation |
 | `description` | No | Human-readable description |
 | `sprite.name` | Yes | Sprite name for API calls |
-| `sprite.workdir` | No | Working directory, available as `{{sprite.workdir}}` |
+| `sprite.path` | Yes | Executable to run (e.g., `claude`) |
+| `sprite.cmd` | No | Command-line arguments (e.g., `-p` for print mode) |
+| `sprite.workdir` | No | Working directory on the sprite |
 | `source.type` | Yes | Adapter name (`github`, `slack`, `agentmail`, `generic`, `cron`) |
 | `source.events` | Yes* | Event types to trigger on (*not for cron) |
 | `source.schedule` | Yes* | Cron expression (*only for cron) |
 | `match` | No | Array of JSONPath equality expressions (AND logic) |
-| `run` | Yes | Shell command with template variables |
+| `run` | Yes | Prompt sent via stdin to the executable, supports `{{payload.x.y}}` templates |
 
 ### Cron Automations
 
 ```yaml
-id: daily-cleanup
+id: daily-metrics
 
 sprite:
-  name: maintenance-sprite
+  name: analytics-agent
+  path: claude
+  cmd: "-p"
   workdir: /home/user
 
 source:
   type: cron
-  schedule: "0 2 * * *"
+  schedule: "0 9 * * 1-5"  # 9am weekdays
 
 run: |
-  cd {{sprite.workdir}} && ./cleanup.sh
+  Good morning! Time for the daily metrics check.
+
+  1. Query the analytics API for the last 24 hours
+  2. Summarize key metrics and trends
+  3. Post the summary to #metrics in Slack
 ```
 
 ### Match Expressions
@@ -189,11 +210,26 @@ fly secrets set \
 fly deploy
 ```
 
-### Configure GitHub Webhook
+### Configure Webhooks
 
-Point your GitHub webhook to:
-```
-https://your-app.fly.dev/webhook/github
-```
+#### GitHub
+Point your GitHub webhook to `https://your-app.fly.dev/webhook/github`
 
 Supported events: `issue_comment`, `pull_request`, `pull_request_review`, `push`
+
+#### Slack
+1. Create a Slack app at https://api.slack.com/apps
+2. Enable Event Subscriptions with URL: `https://your-app.fly.dev/webhook/slack`
+3. Subscribe to events like `app_mention`, `message.channels`
+4. Copy the Signing Secret to `SLACK_WEBHOOK_SECRET`
+
+#### AgentMail
+Point AgentMail webhooks to `https://your-app.fly.dev/webhook/agentmail`
+
+Supported events: `message.received`, `message.sent`, `message.delivered`, `message.bounced`
+
+#### Generic
+For custom integrations, send POST requests to `https://your-app.fly.dev/webhook/generic` with:
+- `X-Webhook-Secret`: Your configured secret
+- `X-Event-Type`: Event type to match (default: `message`)
+- JSON body: Your payload (accessible via `{{payload.x.y}}`)
