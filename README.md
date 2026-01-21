@@ -161,13 +161,13 @@ run: |
 
 ### Match Expressions
 
-Match expressions use JSONPath equality (all must pass):
+Match expressions use JSONPath with `==` or `!=` operators (all must pass):
 
 ```yaml
 match:
   - payload.action == "opened"
   - payload.repository.private == false
-  - payload.sender.login == "dependabot[bot]"
+  - payload.sender.login != "bot-user"
 ```
 
 ### Template Variables

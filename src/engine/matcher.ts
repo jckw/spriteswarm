@@ -56,22 +56,29 @@ function parseLiteral(value: string): string | number | boolean {
 
 /**
  * Evaluate a single match expression
- * Format: "path.to.field == value"
+ * Format: "path.to.field == value" or "path.to.field != value"
  */
 function evaluateExpression(expression: string, context: Record<string, unknown>): boolean {
-  // Split on == operator
-  const match = expression.match(/^(.+?)\s*==\s*(.+)$/);
-  if (!match) {
-    console.warn(`Invalid match expression (missing ==): ${expression}`);
-    return false;
+  // Try != operator first (to avoid matching == inside !=)
+  const neqMatch = expression.match(/^(.+?)\s*!=\s*(.+)$/);
+  if (neqMatch) {
+    const [, path, literalStr] = neqMatch;
+    const actualValue = getNestedValue(context, path.trim());
+    const expectedValue = parseLiteral(literalStr);
+    return actualValue != expectedValue;
   }
 
-  const [, path, literalStr] = match;
-  const actualValue = getNestedValue(context, path.trim());
-  const expectedValue = parseLiteral(literalStr);
+  // Try == operator
+  const eqMatch = expression.match(/^(.+?)\s*==\s*(.+)$/);
+  if (eqMatch) {
+    const [, path, literalStr] = eqMatch;
+    const actualValue = getNestedValue(context, path.trim());
+    const expectedValue = parseLiteral(literalStr);
+    return actualValue == expectedValue;
+  }
 
-  // Loose equality to handle type coercion (e.g., string "42" == number 42)
-  return actualValue == expectedValue;
+  console.warn(`Invalid match expression (missing == or !=): ${expression}`);
+  return false;
 }
 
 /**

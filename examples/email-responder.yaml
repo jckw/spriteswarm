@@ -7,6 +7,9 @@ description: |
 
   Requires AGENTMAIL_WEBHOOK_SECRET in your environment.
 
+  IMPORTANT: The match rule filters out emails from your agent's own address
+  to prevent infinite reply loops. Update the email address below.
+
 sprite:
   name: email-agent
   path: claude
@@ -17,6 +20,10 @@ source:
   type: agentmail
   events:
     - message.received
+
+# Filter out emails sent by the agent itself to prevent reply loops
+match:
+  - payload.message.from != "your-agent@yourdomain.com"
 
 run: |
   You received an email. Read it and draft a helpful response.

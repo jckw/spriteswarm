@@ -282,16 +282,16 @@ Simple JSONPath-like variable substitution:
 
 ## Match Engine
 
-Evaluates array of equality expressions:
+Evaluates array of comparison expressions:
 
 ```
 payload.action == "opened"
 payload.repository.private == false
-payload.sender.login == "dependabot[bot]"
+payload.sender.login != "bot-user"
 ```
 
 - Left side: JSONPath to payload field
-- Operator: `==` only (v1)
+- Operator: `==` (equality) or `!=` (inequality)
 - Right side: string, number, boolean literal
 - All conditions must pass (implicit AND)
 
@@ -361,7 +361,7 @@ GET/PUT/DELETE https://api.cloudflare.com/client/v4/accounts/{account_id}/storag
 | Templating | JSONPath-like for payload fields |
 | Payload passing | Template only (no raw payload) |
 | Match syntax | JSONPath equality expressions |
-| Match operators | Equality only (`==`) |
+| Match operators | Equality (`==`) and inequality (`!=`) |
 | Error handling | Return error to webhook sender |
 | Framework | Hono |
 | Missing template vars | Empty string substitution |
