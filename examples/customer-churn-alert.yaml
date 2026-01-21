@@ -8,6 +8,8 @@ description: |
 
 sprite:
   name: customer-success-agent
+  path: claude
+  cmd: "-p"
   workdir: /home/user
 
 source:
@@ -16,7 +18,6 @@ source:
     - customer.subscription.deleted
 
 run: |
-  claude -p "
   A customer just cancelled their subscription:
 
   Customer ID: {{payload.data.object.customer}}
@@ -36,4 +37,3 @@ run: |
      - Address likely pain points you discovered
      - Offer something concrete (call, discount, feature they might not know about)
   5. Save the draft to drafts/winback-{{payload.data.object.customer}}.md
-  "

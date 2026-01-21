@@ -7,6 +7,8 @@ description: |
 
 sprite:
   name: slack-agent
+  path: claude
+  cmd: "-p"
   workdir: /home/user/workspace
 
 source:

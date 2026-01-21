@@ -6,6 +6,8 @@ import { admin } from './routes/admin.js';
 import { createWebhookRoutes } from './routes/webhook.js';
 import { githubAdapter } from './adapters/github.js';
 import { slackAdapter } from './adapters/slack.js';
+import { genericAdapter } from './adapters/generic.js';
+import { agentmailAdapter } from './adapters/agentmail.js';
 import type { SourceAdapter, AdapterRegistry } from './adapters/types.js';
 import { initCronScheduler, syncCronJobs } from './cron/scheduler.js';
 
@@ -13,6 +15,8 @@ import { initCronScheduler, syncCronJobs } from './cron/scheduler.js';
 const adapters: AdapterRegistry = new Map<string, SourceAdapter>();
 adapters.set('github', githubAdapter);
 adapters.set('slack', slackAdapter);
+adapters.set('generic', genericAdapter);
+adapters.set('agentmail', agentmailAdapter);
 
 const app = new Hono();
 

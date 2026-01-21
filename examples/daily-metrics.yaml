@@ -7,6 +7,8 @@ description: |
 
 sprite:
   name: analytics-agent
+  path: claude
+  cmd: "-p"
   workdir: /home/user
 
 source:
@@ -14,7 +16,6 @@ source:
   schedule: "0 9 * * 1-5"  # 9am weekdays
 
 run: |
-  claude -p "
   Good morning! Time for the daily metrics check.
 
   1. Query PostHog API for the last 24 hours:
@@ -32,4 +33,3 @@ run: |
      - Lead with the key insight, not raw numbers
      - Keep it under 200 words
      - Use :warning: only if something needs immediate attention
-  "

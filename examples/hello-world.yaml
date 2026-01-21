@@ -1,0 +1,32 @@
+# Simple hello-world example - triggers Claude with any incoming message
+id: hello-world
+
+description: |
+  A minimal example that passes any incoming webhook payload to Claude.
+  Great for testing and learning how spriteswarm works.
+
+  To test, send a POST request:
+    curl -X POST http://localhost:8080/webhook/generic \
+      -H "Content-Type: application/json" \
+      -H "X-Webhook-Secret: your-secret" \
+      -d '{"message": "Hello, Claude!"}'
+
+  Set GENERIC_WEBHOOK_SECRET=your-secret in your environment.
+
+sprite:
+  name: hello-agent
+  path: claude
+  cmd: "-p"
+  workdir: /home/user
+
+source:
+  type: generic
+  events:
+    - message
+
+run: |
+  You received a message from a user. Respond helpfully.
+
+  Message: {{payload.message}}
+
+  If the message is empty or unclear, just say hello and explain what you can help with.

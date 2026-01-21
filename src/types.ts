@@ -21,7 +21,7 @@ export interface Automation {
    */
   match?: string[];
 
-  /** Shell command to execute, supports {{payload.x.y}} templates */
+  /** Prompt/input to send via stdin, supports {{payload.x.y}} templates */
   run: string;
 }
 
@@ -29,7 +29,13 @@ export interface SpriteConfig {
   /** Sprite name (same as ID in Sprites.dev API) */
   name: string;
 
-  /** Optional working directory, available as {{sprite.workdir}} */
+  /** Executable to run (e.g., "claude") */
+  path: string;
+
+  /** Command-line arguments (e.g., "-p" for print mode) */
+  cmd?: string;
+
+  /** Working directory on the sprite */
   workdir?: string;
 }
 

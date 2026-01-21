@@ -9,6 +9,7 @@ import {
   isUrlVerification,
   getSlackEventType,
 } from '../adapters/slack.js';
+import { getAgentMailEventType } from '../adapters/agentmail.js';
 
 /**
  * Create webhook routes with the given adapter registry
@@ -54,11 +55,15 @@ export function createWebhookRoutes(adapters: AdapterRegistry): Hono {
       return c.json({ challenge: payload.challenge });
     }
 
-    // Get event type - for Slack, extract from payload; for others, use header
-    const eventType =
-      sourceName === 'slack'
-        ? getSlackEventType(payload)
-        : adapter.getEventType(c.req.raw);
+    // Get event type - for Slack/AgentMail, extract from payload; for others, use header
+    let eventType: string;
+    if (sourceName === 'slack') {
+      eventType = getSlackEventType(payload);
+    } else if (sourceName === 'agentmail') {
+      eventType = getAgentMailEventType(payload);
+    } else {
+      eventType = adapter.getEventType(c.req.raw);
+    }
     console.log(`Received ${sourceName}/${eventType} webhook`);
 
     // Load all automations

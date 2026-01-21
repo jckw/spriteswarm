@@ -7,6 +7,8 @@ description: |
 
 sprite:
   name: ops-agent
+  path: claude
+  cmd: "-p"
   workdir: /home/user
 
 source:
@@ -18,7 +20,6 @@ match:
   - payload.data.issue.level == "error"
 
 run: |
-  claude -p "
   A new Sentry error just came in:
 
   Title: {{payload.data.issue.title}}
@@ -33,4 +34,3 @@ run: |
      - Affected component
   3. Create a Linear issue with your analysis using their API
   4. If critical, also post to #incidents in Slack
-  "

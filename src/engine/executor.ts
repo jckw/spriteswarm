@@ -39,25 +39,39 @@ export async function execute(
       sprite: automation.sprite,
     };
 
-    // Render the command template
-    let command = render(automation.run, context);
+    // Render the prompt template (sent as stdin)
+    const prompt = render(automation.run, context);
 
-    // Prepend workdir cd if specified
-    if (automation.sprite.workdir) {
-      command = `cd ${automation.sprite.workdir} && ${command}`;
+    // Build Sprites API URL
+    const url = new URL(`${SPRITES_API_BASE}/sprites/${encodeURIComponent(automation.sprite.name)}/exec`);
+
+    // Set the executable path
+    url.searchParams.set('path', automation.sprite.path);
+
+    // Set command-line args if provided
+    if (automation.sprite.cmd) {
+      url.searchParams.set('cmd', automation.sprite.cmd);
     }
 
-    // Call Sprites API
-    const url = `${SPRITES_API_BASE}/sprites/${encodeURIComponent(automation.sprite.name)}/exec?cmd=${encodeURIComponent(command)}`;
+    // Set working directory if provided
+    if (automation.sprite.workdir) {
+      url.searchParams.set('dir', automation.sprite.workdir);
+    }
 
-    console.log(`[${automation.id}] Executing on sprite "${automation.sprite.name}": ${command.slice(0, 100)}${command.length > 100 ? '...' : ''}`);
+    // Enable stdin mode
+    url.searchParams.set('stdin', 'true');
+
+    const workdirInfo = automation.sprite.workdir ? ` (in ${automation.sprite.workdir})` : '';
+    console.log(`[${automation.id}] Executing ${automation.sprite.path} on sprite "${automation.sprite.name}"${workdirInfo}`);
+    console.log(`[${automation.id}] Prompt: ${prompt.slice(0, 100)}${prompt.length > 100 ? '...' : ''}`);
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${spritesToken}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'text/plain; charset=utf-8',
       },
+      body: prompt,
     });
 
     if (!response.ok) {

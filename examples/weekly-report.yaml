@@ -7,6 +7,8 @@ description: |
 
 sprite:
   name: reporting-agent
+  path: claude
+  cmd: "-p"
   workdir: /home/user/project
 
 source:
@@ -14,8 +16,6 @@ source:
   schedule: "0 16 * * 5"  # 4pm Friday
 
 run: |
-  cd {{sprite.workdir}} && \
-  claude -p "
   It's Friday - time to write the weekly engineering summary.
 
   1. Use the GitHub API to gather this week's activity:
@@ -31,5 +31,4 @@ run: |
      - What's planned for next week
 
   3. Post to #engineering-updates in Slack
-  4. Also save to reports/week-$(date +%Y-%m-%d).md
-  "
+  4. Also save to reports/week-YYYY-MM-DD.md (use today's date)

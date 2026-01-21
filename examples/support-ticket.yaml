@@ -7,6 +7,8 @@ description: |
 
 sprite:
   name: support-agent
+  path: claude
+  cmd: "-p"
   workdir: /home/user
 
 source:
@@ -15,7 +17,6 @@ source:
     - conversation.user.created
 
 run: |
-  claude -p "
   New support conversation from a customer:
 
   Customer email: {{payload.data.item.user.email}}
@@ -40,4 +41,3 @@ run: |
   4. Save the draft for human review (don't send automatically)
      - Create file: drafts/support-{{payload.data.item.id}}.md
      - Post to #support-drafts in Slack with a link
-  "

@@ -1,17 +1,22 @@
-app = "spriteswarm"
-primary_region = "sjc"
+# fly.toml app configuration file generated for spriteswarm on 2026-01-18T14:53:44-05:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'spriteswarm'
+primary_region = 'ord'
 
 [build]
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 1
-  processes = ["app"]
+  processes = ['app']
 
 [[vm]]
-  memory = "256mb"
-  cpu_kind = "shared"
+  memory = '256mb'
   cpus = 1
+  memory_mb = 256

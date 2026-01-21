@@ -1,0 +1,32 @@
+# AI email responder using AgentMail
+id: email-responder
+
+description: |
+  Responds to incoming emails using Claude. When a new email arrives,
+  Claude reads the message and drafts a helpful response.
+
+  Requires AGENTMAIL_WEBHOOK_SECRET in your environment.
+
+sprite:
+  name: email-agent
+  path: claude
+  cmd: "-p"
+  workdir: /home/sprite/email
+
+source:
+  type: agentmail
+  events:
+    - message.received
+
+run: |
+  You received an email. Read it and draft a helpful response.
+
+  From: {{payload.message.from}}
+  Subject: {{payload.message.subject}}
+  Message: {{payload.message.text}}
+
+  Draft a professional, helpful response to this email.
+  Keep your response concise and address the sender's questions or concerns.
+
+  Send your reply back to the sender via the AgentMail API in Python. See example.py for
+  an example of how to run the code. The environment variable is already set.

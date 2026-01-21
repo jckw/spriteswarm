@@ -7,6 +7,8 @@ description: |
 
 sprite:
   name: code-reviewer
+  path: claude
+  cmd: "-p"
   workdir: /home/user/repo
 
 source:
@@ -19,15 +21,16 @@ match:
   - payload.pull_request.draft == false
 
 run: |
-  cd {{sprite.workdir}} && \
-  git fetch origin pull/{{payload.pull_request.number}}/head:pr-{{payload.pull_request.number}} && \
-  git checkout pr-{{payload.pull_request.number}} && \
-  claude -p "
   Review this PR and post your feedback to GitHub.
 
   PR #{{payload.pull_request.number}}: {{payload.pull_request.title}}
   Author: {{payload.pull_request.user.login}}
 
+  First, fetch and checkout the PR:
+    git fetch origin pull/{{payload.pull_request.number}}/head:pr-{{payload.pull_request.number}}
+    git checkout pr-{{payload.pull_request.number}}
+
+  Then review:
   1. Run 'git diff main' to see the changes
   2. Review for:
      - Bugs or logic errors
@@ -36,4 +39,3 @@ run: |
      - Code style consistency
   3. If you find issues, post a review with specific line comments using the GitHub CLI
   4. If it looks good, approve with a brief summary of what the PR does
-  "

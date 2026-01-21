@@ -30,6 +30,9 @@ curl http://localhost:8080/admin/automations \
 | `SPRITES_TOKEN` | Bearer token for Sprites.dev API |
 | `ADMIN_TOKEN` | Shared secret for admin endpoints |
 | `GITHUB_WEBHOOK_SECRET` | HMAC secret for GitHub webhook validation |
+| `SLACK_WEBHOOK_SECRET` | Signing secret for Slack webhook validation |
+| `AGENTMAIL_WEBHOOK_SECRET` | Secret for AgentMail webhook validation |
+| `GENERIC_WEBHOOK_SECRET` | Secret for generic webhook validation |
 | `CF_ACCOUNT_ID` | Cloudflare account ID (32 hex chars, found in dashboard URL) |
 | `CF_API_TOKEN` | Cloudflare API token with KV permissions |
 | `CF_KV_NAMESPACE_ID` | KV namespace ID for automations storage |
@@ -40,7 +43,10 @@ The `examples/` directory contains ready-to-use automations:
 
 | File | Description |
 |------|-------------|
+| `hello-world.yaml` | Simple example using generic webhooks |
 | `pr-review.yaml` | AI reviews PRs and posts feedback |
+| `slack-assistant.yaml` | Respond to Slack @mentions |
+| `email-responder.yaml` | Auto-respond to emails via AgentMail |
 | `daily-metrics.yaml` | Daily metrics collection on a schedule |
 | `weekly-report.yaml` | Weekly summary reports |
 | `sentry-triage.yaml` | Triage Sentry errors automatically |
@@ -109,7 +115,7 @@ run: |
 | `description` | No | Human-readable description |
 | `sprite.name` | Yes | Sprite name for API calls |
 | `sprite.workdir` | No | Working directory, available as `{{sprite.workdir}}` |
-| `source.type` | Yes | Adapter name (`github`, `cron`) |
+| `source.type` | Yes | Adapter name (`github`, `slack`, `agentmail`, `generic`, `cron`) |
 | `source.events` | Yes* | Event types to trigger on (*not for cron) |
 | `source.schedule` | Yes* | Cron expression (*only for cron) |
 | `match` | No | Array of JSONPath equality expressions (AND logic) |
